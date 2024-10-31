@@ -5,6 +5,8 @@ import { io } from 'socket.io-client';
 
 export const socket = io('http://localhost:4000');
 
+export const URL = 'http://localhost:4000/estudios'
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />

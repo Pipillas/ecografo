@@ -7,6 +7,7 @@ const socketIo = require('socket.io');
 const cors = require('cors');
 const { Usuario } = require('./database');
 const jwt = require('jsonwebtoken');
+const { v4: uuidv4 } = require('uuid'); // Necesitas instalar uuid para generar UUIDs únicos
 
 const app = express();
 const server = http.createServer(app);
@@ -43,10 +44,28 @@ async function analizarCarpeta(usuarioPath) {
     const estudiosArray = [];
     const estudios = fs.readdirSync(usuarioPath);
 
-    estudios?.forEach((estudio) => {
+    for (const estudio of estudios) {
         const fotos_estudios = fs.readdirSync(path.join(usuarioPath, estudio));
-        estudiosArray.push({ nombre: estudio, fotos: fotos_estudios });
-    });
+
+        // Si el estudio ya existe en la base de datos, recuperar su `id`
+        let estudioId;
+        const estudioExistente = await Usuario.findOne(
+            { dni: numeros, "estudios.nombre": estudio },
+            { "estudios.$": 1 }
+        );
+
+        if (estudioExistente) {
+            // Si el estudio ya tiene un `id`, usar el existente
+            estudioId = estudioExistente.estudios[0].id;
+        } else {
+            // Si no tiene un `id`, generar uno nuevo
+            estudioId = uuidv4();
+        }
+
+        estudiosArray.push({
+            nombre: estudio, fotos: fotos_estudios, id: estudioId,
+        });
+    }
 
     // Crear el objeto base del usuario
     let usuarioObjeto = {
@@ -77,6 +96,7 @@ async function analizarCarpeta(usuarioPath) {
         console.error('Error al crear o actualizar usuario:', error);
     }
 }
+
 
 // Función para mover los archivos de una carpeta a otra
 function moverArchivos(oldPath, newPath) {
@@ -195,6 +215,19 @@ io.on('connection', (socket) => {
             callback({ usuario, success: true });
         } catch (error) {
             callback({ usuario: null, success: false });
+        }
+    });
+
+    socket.on('estudio', async (id, callback) => {
+        try {
+            const usuario = await Usuario.findOne(
+                { "estudios": { $elemMatch: { id } } } // Usa `$elemMatch` para asegurarte de que exista el `id` dentro de `estudios`
+            );
+            // Extraer las fotos del estudio encontrado usando find
+            const estudio = usuario.estudios.find(est => est.id === id);
+            callback({ estudio, success: true });
+        } catch (error) {
+            callback({ error: 'Error al buscar el estudio', success: false });
         }
     });
 });

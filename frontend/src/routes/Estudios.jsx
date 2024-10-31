@@ -24,7 +24,6 @@ function Estudios({ usuario }) {
     useEffect(() => {
         socket.emit('estudios', usuario.id, (response) => {
             setEstudios(response.usuario.estudios);
-            console.log(response.usuario.estudios);
         });
     }, []);
 
@@ -35,10 +34,13 @@ function Estudios({ usuario }) {
                     <i className="fas fa-key"></i>
                     Cambiar Contraseña
                 </a>
-                <a href="#" className="nav-link">
+                <div onClick={() => {
+                    localStorage.clear();
+                    window.location.reload();
+                }} className="nav-link">
                     <i className="fas fa-sign-out-alt"></i>
                     Cerrar Sesión
-                </a>
+                </div>
             </nav>
 
             <div className="table-container">
@@ -55,20 +57,16 @@ function Estudios({ usuario }) {
                         </tr>
                     </thead>
                     <tbody>
-
                         {
                             estudios?.map((estudio, index) => <tr key={index}>
                                 <td className="date">{extraerFecha(estudio.nombre)} </td>
                                 <td className="study-name">Ecografia</td>
                                 <td className="actions-cell">
-                                    <button onClick={() => window.open(`http://localhost:4000/estudios/${usuario.nombre}${usuario.dni}/${estudio.nombre}/${estudio.fotos[3]}`, "_blank")} className="action-button" title="Ver estudio">
+                                    <button onClick={() => window.open(`/estudio/${estudio.id}`)} className="action-button" title="Ver estudio">
                                         <i className="fas fa-eye"></i>
                                     </button>
                                     <button className="action-button" title="Descargar estudio">
                                         <i className="fas fa-download"></i>
-                                    </button>
-                                    <button className="action-button" title="Compartir por WhatsApp">
-                                        <i className="fab fa-whatsapp"></i>
                                     </button>
                                 </td>
                             </tr>)

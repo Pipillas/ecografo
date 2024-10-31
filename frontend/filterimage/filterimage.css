@@ -1,0 +1,136 @@
+.contenedor-filter {
+    background-color: rgb(14, 14, 14);
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.filtros {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.filtro {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 15px;
+}
+
+.filtro label {
+    margin-bottom: 10px;
+}
+
+.slider {
+    appearance: inherit;
+    -webkit-appearance: none;
+    width: 100%;
+    height: 15px;
+    border-radius: 10px;
+    outline: none;
+    opacity: 0.9;
+}
+
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: url(../assets/filter.svg);
+    cursor: pointer;
+}
+
+.slider::-moz-range-thumb {
+    border-radius: 50%;
+    background: url(../assets/filter.svg);
+    cursor: pointer;
+}
+
+.contenedor-filter-image {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    width: 90%;
+    height: 90%;
+    border: 1px solid rgba(255, 255, 255, 0.536);
+}
+
+.reset-filter {
+    text-align: center;
+    padding: 5px;
+    border-radius: 10px;
+}
+
+.reset-filter:hover {
+    cursor: pointer;
+    background-color: red;
+}
+
+.contenedor-filter-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+@media (width <=750px) {
+    .contenedor-filter {
+        flex-direction: column-reverse;
+        justify-content: space-evenly;
+        font-size: 16px;
+    }
+    .filtros {
+        flex-direction: column;
+        margin-top: -50px;
+        box-sizing: border-box;
+    }
+
+    .filtro {
+        padding: 0px;
+        flex-direction: row;
+        margin-top: 15px;
+        margin-bottom: 15px;
+    }
+
+    .filtro label {
+        margin-bottom: 0px;
+        margin-right: 10px;
+    }
+
+    .reset-filter:hover {
+        background-color: black;
+    }
+    .reset-filter:active {
+        background-color: red;
+    }
+
+    .contenedor-filter-image {
+        border: none
+    }
+
+    .reset-filter {
+        margin-bottom: 15px;
+    }
+
+    .contenedor-filter-image {
+        position: static; /* Anula position: relative */
+        display: block; /* Anula display: flex */
+        justify-content: initial; /* Anula justify-content: center */
+        align-items: initial; /* Anula align-items: center */
+        overflow: visible; /* Anula overflow: hidden */
+        width: auto; /* Anula width: 90% */
+        height: auto; /* Anula height: 90% */
+        border: none; /* Anula border: 1px solid rgba(255, 255, 255, 0.536) */
+    }
+
+    .contenedor-filter-image {
+        padding-right: 10px;
+        padding-left: 10px;
+    }
+}
