@@ -1,214 +1,492 @@
-/* imagecarousel.css */
-.carousel-container {
-    min-height: 100vh;
-    width: 100%;
-    padding: 2rem 1rem;
-    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+/* Base */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.viewer-container {
+  width: 100vw;
+  height: 100vh;
+  background-color: #0a0a0a;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+  outline: none;
+}
+
+/* Barra de acciones rápidas */
+.quick-actions-bar {
+  height: 48px;
+  background-color: #151515;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 16px;
+  border-bottom: 1px solid #222;
+}
+
+.quick-actions-left,
+.quick-actions-right {
+  display: flex;
+  gap: 8px;
+}
+
+.quick-action {
+  background: none;
+  border: none;
+  color: #999;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.quick-action:hover {
+  background-color: #222;
+  color: #fff;
+}
+
+.quick-action.active {
+  background-color: #2c2c2c;
+  color: #fff;
+}
+
+.quick-action i {
+  font-size: 1.1rem;
+}
+
+/* Reset button styling */
+/* Reset button styling */
+.reset-button {
+  width: 100%;
+  margin-top: 30px;
+  padding: 12px;
+  background-color: #1a1a1a;  /* Color base oscuro que coincide con el tema */
+  border: 1px solid #333;     /* Borde sutil para dar profundidad */
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.reset-button:hover {
+  background-color: #2c2c2c;
+  border-color: #444;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+}
+
+.reset-button i {
+  margin-right: 8px;
+  font-size: 1.1rem;  /* Tamaño ligeramente mayor para el ícono */
 }
 
 
-/* Contenedor de controles */
-.controls-container {
-    max-width: 1200px;
-    margin: 0 auto 1.5rem;
-    padding: 1rem;
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(8px);
-    border-radius: 0.75rem;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.filter-controls {
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 1.5rem;
-}
-
-.filter-control {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.filter-control label {
-    color: white;
-    font-size: 0.875rem;
-    white-space: nowrap;
-    min-width: 100px;
-}
-
-.filter-control input[type="range"] {
-    width: 80px;
-    height: 4px;
-    background: rgba(59, 130, 246, 0.3);
-    border-radius: 9999px;
-    cursor: pointer;
-    appearance: none;
-}
-
-.filter-control input[type="range"]::-webkit-slider-thumb {
-    appearance: none;
-    width: 12px;
-    height: 12px;
-    background: #60a5fa;
-    border-radius: 50%;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.filter-control input[type="range"]::-webkit-slider-thumb:hover {
-    background: #3b82f6;
-}
-
-/* Contenedor de imagen principal */
-.image-container {
-    position: relative;
-    max-width: 1200px;
-    margin: 0 auto 1.5rem;
-    aspect-ratio: 16/9;
-    border-radius: 0.75rem;
-    overflow: hidden;
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-}
-
-.image-container img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    transition: all 0.5s ease;
+/* Navegación de imágenes */
+.image-navigation {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .nav-button {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(4px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-    padding: 0.75rem;
-    border-radius: 50%;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 1.2rem;
+  line-height: 1;
+  transition: all 0.15s ease;
 }
 
-.nav-button:hover {
-    background: rgba(255, 255, 255, 0.2);
+.nav-button:disabled {
+  color: #666;
+  cursor: not-allowed;
+  opacity: 0.3;
 }
 
-.nav-button.prev {
-    left: 1rem;
+.nav-button:not(:disabled):hover {
+  background-color: #222;
+  transform: scale(1.1);
 }
 
-.nav-button.next {
-    right: 1rem;
+.image-counter {
+  font-size: 0.9rem;
+  color: #ccc;
+  min-width: 60px;
+  text-align: center;
 }
 
-/* Contenedor de miniaturas */
-.thumbnails-container {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 1rem;
-    overflow-x: auto;
+/* Contenido principal */
+.main-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
 }
 
-.thumbnail-button {
-    position: relative;
-    width: 96px;
-    height: 64px;
-    border-radius: 0.5rem;
-    overflow: hidden;
-    cursor: pointer;
-    border: none;
-    padding: 0;
-    transition: all 0.3s ease;
-    opacity: 0.7;
-    flex-shrink: 0;
+/* Panel de filtros */
+.filters-panel {
+  width: 280px;
+  background-color: #151515;
+  padding: 16px;
+  overflow-y: auto;
+  border-right: 1px solid #222;
 }
 
-.thumbnail-button::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    z-index: 1;
+.filter-control {
+  margin-bottom: 16px;
 }
 
-.thumbnail-button img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+.filter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
-.thumbnail-button:hover {
-    opacity: 1;
-    transform: scale(1.05);
+.filter-value {
+  color: #999;
+  font-size: 0.9rem;
 }
 
-.thumbnail-button.active {
-    opacity: 1;
-    transform: scale(1.1);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    border: 2px solid #60a5fa;
+.filter-slider {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  background: #333;
+  border-radius: 2px;
+  outline: none;
 }
 
-/* Scrollbar personalizada para las miniaturas */
-.thumbnails-container::-webkit-scrollbar {
-    height: 6px;
+.filter-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.15s ease;
 }
 
-.thumbnails-container::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 3px;
+.filter-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
 }
 
-.thumbnails-container::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 3px;
+/* Área de trabajo de imagen */
+.image-workspace {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  background: #000;
+  overflow: hidden;
 }
 
-.thumbnails-container::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.4);
+.image-workspace img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  will-change: transform;
 }
 
-/* Responsive */
+.zoom-indicator {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background-color: rgba(0, 0, 0, 0.7);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: #fff;
+  z-index: 10;
+}
+
+/* Panel de miniaturas */
+.thumbnails-panel {
+  height: 100px;
+  background-color: #151515;
+  border-top: 1px solid #222;
+  padding: 8px;
+}
+
+.thumbnails-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  height: 100%;
+  padding: 0 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #666 #333;
+}
+
+.thumbnails-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.thumbnails-scroll::-webkit-scrollbar-track {
+  background: #333;
+  border-radius: 3px;
+}
+
+.thumbnails-scroll::-webkit-scrollbar-thumb {
+  background: #666;
+  border-radius: 3px;
+}
+
+.thumbnail {
+  position: relative;
+  flex: 0 0 auto;
+  width: 80px;
+  height: 80px;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.thumbnail:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.thumbnail.active {
+  border-color: #fff;
+}
+
+.thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumbnail-number {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.8rem;
+}
+
+/* Estilos para el modo fullscreen */
+:fullscreen .viewer-container {
+  background-color: #000;
+}
+
+:fullscreen .quick-actions-bar {
+  background-color: rgba(21, 21, 21, 0.95);
+}
+
+:fullscreen .filters-panel {
+  background-color: rgba(21, 21, 21, 0.95);
+}
+
+:fullscreen .thumbnails-panel {
+  background-color: rgba(21, 21, 21, 0.95);
+}
+
+
+
+.viewer-container.filters-hidden .filters-panel {
+  display: none;
+}
+
+.viewer-container.thumbnails-hidden .thumbnails-panel {
+  display: none;
+}
+
+/* Ajustar espacios cuando los paneles están ocultos */
+.viewer-container.filters-hidden .image-workspace {
+  margin-left: 0;
+}
+
+.viewer-container.thumbnails-hidden .main-content {
+  height: 100%;
+}
+
+.mobile-swipe-hint {
+  display: none;  /* Oculto por defecto */
+}
+
+/* Estilos responsive para el visor de imágenes */
+/* Mantener todos los estilos base y de PC igual hasta los media queries */
+
+/* Estilos responsive para el visor de imágenes */
 @media (max-width: 768px) {
-    .filter-control {
-        min-width: auto;
-    }
+  .quick-actions-bar {
+    display: none; /* Ocultamos la barra superior en móvil */
+  }
 
-    .filter-control label {
-        min-width: 80px;
-    }
+  .mobile-swipe-hint {
+    display: block;
+    position: absolute;
+    bottom: 32px;
+    white-space: nowrap;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 0.8rem;
+    pointer-events: none;
+    opacity: 0.8;
+  }
 
-    .nav-button {
-        padding: 0.5rem;
-    }
+  .main-content {
+    flex-direction: column;
+    height: 100vh;
+  }
 
-    .thumbnail-button {
-        width: 72px;
-        height: 48px;
-    }
+  /* Panel de filtros compacto */
+  .filters-panel {
+    position: static;
+    width: 100%;
+    height: auto;
+    padding: 12px;
+    transform: none;
+    background-color: #151515;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    border-radius: 0;
+  }
+
+  .filter-control {
+    margin-bottom: 0;
+    padding: 4px;
+  }
+
+  .filter-header {
+    margin-bottom: 4px;
+  }
+
+  .filter-header label {
+    font-size: 0.8rem;
+  }
+
+  .filter-value {
+    font-size: 0.8rem;
+  }
+
+  .filter-slider {
+    height: 3px;
+  }
+
+  .filter-slider::-webkit-slider-thumb {
+    width: 12px;
+    height: 12px;
+  }
+
+  .reset-button {
+    grid-column: span 2;
+    margin-top: 8px;
+    padding: 8px;
+  }
+
+  .reset-button span {
+    font-size: 0.8rem;
+  }
+
+  /* Área de imagen principal */
+  .image-workspace {
+    margin-bottom: 10vh;
+    flex: 1;
+    width: 100%;
+    touch-action: manipulation;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
-@media (max-width: 480px) {
-    .carousel-title {
-        font-size: 2rem;
-    }
+  .image-workspace img {
+    max-width: 100%;
+    width: auto;
+    height: auto;
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+  }
 
-    .filter-controls {
-        gap: 1rem;
-    }
+  /* Panel de miniaturas */
+  .thumbnails-panel {
+    position: static;
+    height: 60px;
+    padding: 4px;
+    background-color: #151515;
+  }
+
+  .thumbnails-scroll {
+    gap: 4px;
+  }
+
+  .thumbnail {
+    width: 40px;
+    height: 40px;
+    border-width: 1px;
+  }
+
+  .thumbnail-number {
+    font-size: 0.7rem;
+    padding: 1px 4px;
+  }
+}
+
+/* Ajustes adicionales para pantallas muy pequeñas */
+@media (max-width: 480px) {
+  .filters-panel {
+    padding: 8px;
+  }
+
+  .filter-header label {
+    font-size: 0.75rem;
+  }
+
+  .thumbnails-panel {
+    height: 50px;
+  }
+
+  .thumbnail {
+    width: 35px;
+    height: 35px;
+  }
+}
+
+/* Eliminar estilos específicos de landscape que ya no necesitamos */
+@media (max-width: 896px) and (orientation: landscape) {
+  .filters-panel {
+    position: static;
+    width: 100%;
+    transform: none;
+    max-height: none;
+  }
+
+  .thumbnails-panel {
+    position: static;
+    width: 100%;
+    height: 50px;
+  }
+
+  .thumbnails-scroll {
+    flex-direction: row;
+  }
 }
