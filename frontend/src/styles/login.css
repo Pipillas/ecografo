@@ -6,16 +6,10 @@
     box-sizing: border-box;
 }
 
-#root {
-    font-family: 'Poppins', sans-serif;
-    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
 .login-container {
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #1e3c72, #2a5298);
+    min-height: 100svh;
     width: 100%;
     padding: 20px;
     display: flex;
@@ -24,33 +18,12 @@
 }
 
 .login-card {
-    position: relative;
     width: 100%;
     max-width: 420px;
     background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(20px);
     border-radius: 24px;
     padding: 48px 40px;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-    overflow: hidden;
-    transform: translateY(0);
-    transition: all 0.5s ease;
-}
-
-.login-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
-}
-
-.card-blur {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(145deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 100%);
-    border-radius: 24px;
-    pointer-events: none;
 }
 
 .form-header {
@@ -102,7 +75,6 @@
     transform: translateY(-50%);
     color: #1e3c72;
     font-size: 18px;
-    transition: all 0.3s ease;
 }
 
 .form-input {
@@ -113,7 +85,7 @@
     font-size: 16px;
     font-weight: 500;
     color: #333;
-    transition: all 0.3s ease;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
     background: rgba(255, 255, 255, 0.9);
 }
 
@@ -140,7 +112,6 @@
     font-size: 18px;
     transition: all 0.3s ease;
     user-select: none;
-    /* Previene la selección del texto */
 }
 
 .toggle-password:hover {

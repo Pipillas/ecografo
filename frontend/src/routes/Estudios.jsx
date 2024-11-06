@@ -1,24 +1,22 @@
-import React, { useEffect, useState } from 'react'
-import '../styles/tabla.css';
+import React, { useEffect, useState } from 'react';
+import '../styles/tabla.css'
 import { socket } from '../main';
+import PasswordModal from '../components/PasswordModal'; // Agregar esta importación
 
 function Estudios({ usuario }) {
-
     const [estudios, setEstudios] = useState([]);
+    const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false); // Agregar este estado
 
     function extraerFecha(cadena) {
-        // Expresión regular para capturar los componentes de la fecha
         const regex = /(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/;
         const match = cadena.match(regex);
 
         if (match) {
             const [_, year, month, day, hour, minute] = match;
-
-            // Construye la fecha en el formato "DD-MM-YYYY HH:MM"
             return `${day}/${month}/${year} ${hour}:${minute}`;
         }
 
-        return null; // Devuelve null si no hay coincidencia
+        return null;
     }
 
     useEffect(() => {
@@ -28,54 +26,84 @@ function Estudios({ usuario }) {
     }, []);
 
     return (
-        <React.Fragment>
+        <div className="content-wrapper">
             <nav className="nav-container">
-                <a href="#" className="nav-link">
-                    <i className="fas fa-key"></i>
-                    Cambiar Contraseña
-                </a>
-                <div onClick={() => {
-                    localStorage.clear();
-                    window.location.reload();
-                }} className="nav-link">
-                    <i className="fas fa-sign-out-alt"></i>
-                    Cerrar Sesión
+                <div className="nav-user">
+                    <i className="fas fa-user"></i>
+                    <span className="user-name">{usuario.nombre?.replace(/_/g, ' ')}</span>
+                </div>
+                <div className="nav-actions">
+                    <a
+                        href="#"
+                        className="nav-link"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            setIsPasswordModalOpen(true);
+                        }}
+                    >
+                        <i className="fas fa-key"></i>
+                        Cambiar Contraseña
+                    </a>
+                    <div
+                        onClick={() => {
+                            localStorage.clear();
+                            window.location.reload();
+                        }}
+                        className="nav-link"
+                    >
+                        <i className="fas fa-sign-out-alt"></i>
+                        Cerrar Sesión
+                    </div>
                 </div>
             </nav>
 
             <div className="table-container">
-                <div className="table-blur"></div>
                 <div className="table-header">
                     <h1>Mis Estudios</h1>
                 </div>
-                <table className="studies-table">
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Estudio</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {
-                            estudios?.map((estudio, index) => <tr key={index}>
-                                <td className="date">{extraerFecha(estudio.nombre)} </td>
-                                <td className="study-name">Ecografia</td>
-                                <td className="actions-cell">
-                                    <button onClick={() => window.open(`/estudio/${estudio.id}`)} className="action-button" title="Ver estudio">
-                                        <i className="fas fa-eye"></i>
-                                    </button>
-                                    <button className="action-button" title="Descargar estudio">
-                                        <i className="fas fa-download"></i>
-                                    </button>
-                                </td>
-                            </tr>)
-                        }
-                    </tbody>
-                </table>
+                <div className="table-wrapper">
+                    <table className="studies-table">
+                        <thead>
+                            <tr>
+                                <th>Información</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {estudios?.map((estudio, index) => (
+                                <tr key={index}>
+                                    <td>
+                                        <div className="study-info-container">
+                                            <div className="study-name">Ecografía</div>
+                                            <div className="study-date">{extraerFecha(estudio.nombre)}</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div className="actions-cell">
+                                            <button
+                                                onClick={() => window.open(`/estudio/${estudio.id}`)}
+                                                className="btn-primary"
+                                            >
+                                                Ver
+                                            </button>
+                                            <button className="btn-secondary">
+                                                Descargar
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </React.Fragment>
-    )
+
+            <PasswordModal 
+                isOpen={isPasswordModalOpen}
+                onClose={() => setIsPasswordModalOpen(false)}
+            />
+        </div>
+    );
 }
 
-export default Estudios
+export default Estudios;

@@ -29,10 +29,15 @@ function Login() {
         });
     };
 
+    const handleKeyPress = (e) => {
+        if (e.key === 'Enter') {
+            entrar();
+        }
+    };
+
     return (
         <div className="login-container">
             <div className="login-card">
-                <div className="card-blur"></div>
                 <div className="login-form">
                     <div className="form-header">
                         <div className="logo">
