@@ -230,6 +230,15 @@ io.on('connection', (socket) => {
             callback({ error: 'Error al buscar el estudio', success: false });
         }
     });
+
+    socket.on('cambiar-password', async (data, callback) => {
+        try {
+            await Usuario.findByIdAndUpdate(data.id, { clave: data.passwordNueva });
+            callback({ success: true });
+        } catch (error) {
+            callback({ success: false, error: 'Sucedio un error' });
+        }
+    });
 });
 
 // Inicio del servidor

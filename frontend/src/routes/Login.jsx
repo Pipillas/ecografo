@@ -50,14 +50,32 @@ function Login() {
                     <div className="form-group">
                         <div className="input-with-icon">
                             <i className="fas fa-id-card"></i>
-                            <input autoComplete='off' name='dni' onChange={inputChangeHandler} value={usuario.dni} type="text" placeholder="Ingrese su DNI" className="form-input" />
+                            <input
+                                autoComplete='off'
+                                name='dni'
+                                onChange={inputChangeHandler}
+                                onKeyUp={handleKeyPress}
+                                value={usuario.dni}
+                                type="text"
+                                placeholder="Ingrese su DNI"
+                                className="form-input"
+                            />
                         </div>
                     </div>
 
                     <div className="form-group">
                         <div className="input-with-icon">
                             <i className="fas fa-lock"></i>
-                            <input autoComplete='off' name='clave' onChange={inputChangeHandler} value={usuario.clave} type={showPassword ? 'text' : 'password'} placeholder="Ingrese su clave" className="form-input" />
+                            <input
+                                autoComplete='off'
+                                name='clave'
+                                onChange={inputChangeHandler}
+                                onKeyUp={handleKeyPress}
+                                value={usuario.clave}
+                                type={showPassword ? 'text' : 'password'}
+                                placeholder="Ingrese su clave"
+                                className="form-input"
+                            />
                             <button tabIndex="-1" onClick={() => setShowPassword(prev => !prev)} type="button" className="toggle-password">
                                 <i className="far fa-eye"></i>
                             </button>

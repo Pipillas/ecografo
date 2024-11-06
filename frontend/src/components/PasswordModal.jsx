@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { socket } from '../main';
 import '../styles/passwordmodal.css';
 
-const PasswordModal = ({ isOpen, onClose }) => {
+const PasswordModal = ({ isOpen, onClose, usuario }) => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
@@ -16,7 +16,6 @@ const PasswordModal = ({ isOpen, onClose }) => {
         setLoading(true);
 
         const formData = new FormData(e.target);
-        const currentPassword = formData.get('currentPassword');
         const newPassword = formData.get('newPassword');
         const confirmPassword = formData.get('confirmPassword');
 
@@ -33,19 +32,13 @@ const PasswordModal = ({ isOpen, onClose }) => {
             return;
         }
 
-        if (currentPassword === newPassword) {
-            setError('La nueva contraseña debe ser diferente a la actual');
-            setLoading(false);
-            return;
-        }
-
         // Enviar al servidor
-        socket.emit('cambiarPassword', {
-            passwordActual: currentPassword,
+        socket.emit('cambiar-password', {
+            id: usuario.id,
             passwordNueva: newPassword
         }, (response) => {
             setLoading(false);
-            
+
             if (response.error) {
                 setError(response.error);
                 return;
@@ -87,19 +80,6 @@ const PasswordModal = ({ isOpen, onClose }) => {
                         </div>
                     )}
                     <div className="form-group">
-                        <label htmlFor="currentPassword">Contraseña Actual</label>
-                        <div className="password-input">
-                            <input
-                                type="password"
-                                id="currentPassword"
-                                name="currentPassword"
-                                required
-                                disabled={loading}
-                            />
-                            <i className="fas fa-lock"></i>
-                        </div>
-                    </div>
-                    <div className="form-group">
                         <label htmlFor="newPassword">Nueva Contraseña</label>
                         <div className="password-input">
                             <input
@@ -128,16 +108,16 @@ const PasswordModal = ({ isOpen, onClose }) => {
                         </div>
                     </div>
                     <div className="modal-actions">
-                        <button 
-                            type="button" 
-                            className="btn-secondary" 
+                        <button
+                            type="button"
+                            className="btn-secondary"
                             onClick={onClose}
                             disabled={loading}
                         >
                             Cancelar
                         </button>
-                        <button 
-                            type="submit" 
+                        <button
+                            type="submit"
                             className="btn-primary"
                             disabled={loading}
                         >

@@ -98,7 +98,8 @@ function Estudios({ usuario }) {
                 </div>
             </div>
 
-            <PasswordModal 
+            <PasswordModal
+                usuario={usuario}
                 isOpen={isPasswordModalOpen}
                 onClose={() => setIsPasswordModalOpen(false)}
             />
