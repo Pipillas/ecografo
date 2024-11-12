@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { socket, URL } from '../main';
+import { socket, IP } from '../main';
 import ImageCarousel from '../components/ImageCarousel';
 
 function Estudio({ usuario }) {
@@ -12,7 +12,7 @@ function Estudio({ usuario }) {
         socket.emit('estudio', id, (response) => {
             if (response.success) {
                 const stringFotos = response.estudio.fotos?.map((foto) => {
-                    return `${URL}/${usuario.nombre}${usuario.dni}/${response.estudio.nombre}/${foto}`;
+                    return `${IP}/estudios/${usuario.nombre}${usuario.dni}/${response.estudio.nombre}/${foto}`;
                 });
                 setFotos(stringFotos);
             } else {

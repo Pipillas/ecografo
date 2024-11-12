@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import '../styles/tabla.css'
-import { socket } from '../main';
+import { IP, socket } from '../main';
 import PasswordModal from '../components/PasswordModal'; // Agregar esta importación
 
 function Estudios({ usuario }) {
@@ -86,7 +86,9 @@ function Estudios({ usuario }) {
                                             >
                                                 Ver
                                             </button>
-                                            <button className="btn-secondary">
+                                            <button
+                                                onClick={() => fetch(`${IP}/descargar/${estudio.id}`)}
+                                                className="btn-secondary">
                                                 Descargar
                                             </button>
                                         </div>

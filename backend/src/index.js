@@ -242,10 +242,34 @@ io.on('connection', (socket) => {
 });
 
 // Inicio del servidor
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 3000;
 
 // Usa express.static para servir los archivos de esa carpeta
 app.use('/estudios', express.static(rutaCarpeta));
+
+app.get('/descargar/:id', async (req, res) => {
+    try {
+        const usuario = await Usuario.findOne(
+            { "estudios": { $elemMatch: { id: req.params.id } } } // Usa `$elemMatch` para asegurarte de que exista el `id` dentro de `estudios`
+        );
+        // Extraer las fotos del estudio encontrado usando find
+        const estudio = usuario.estudios.find(est => est.id === req.params.id);
+        const downloadPath = path.join(__dirname, 'estudios', `${usuario.nombre}${usuario.dni}`, estudio.nombre, estudio.id);
+        console.log(downloadPath);
+    } catch (error) {
+        console.log(error);
+    }
+    res.json({ success: true });
+});
+
+// Sirve los archivos estáticos desde la carpeta 'dist_web' en la raíz '/'
+const distPath = path.join(__dirname, '..', 'dist');
+app.use(express.static(distPath));
+
+// Maneja todas las rutas para el frontend "web" en la raíz '/'
+app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+});
 
 server.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`);
