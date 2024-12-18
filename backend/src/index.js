@@ -19,20 +19,21 @@ app.use(cors());
 app.use(express.json());
 
 // Define la ruta de la carpeta que deseas observar
-const rutaCarpeta = path.join(__dirname, 'estudios');
+// const rutaCarpeta = path.join(__dirname, 'estudios');
+const rutaCarpeta = 'C:/Users/pipas/Escritorio/onedrive juli/OneDrive/estudios';
 
 // Inicializa el observador en la carpeta "estudios"
 const watcher = chokidar.watch(rutaCarpeta, {
+    depth: 0, // Solo la carpeta principal
     ignored: /(^|[\/\\])\../, // ignora archivos ocultos
     persistent: true,
     ignoreInitial: true,
-    depth: 0
 });
 
 // Función para separar letras y números
 const separarLetrasNumeros = (str) => {
     const resultado = str.match(/([a-zA-Z_]+)(\d+)/);
-    return resultado ? { letras: resultado[1], numeros: resultado[2] } : null;
+    return resultado ? { letras: resultado[1], numeros: resultado[2] } : { letras: null, numeros: null };
 };
 
 // Función para analizar una sola carpeta específica de usuario
@@ -98,26 +99,41 @@ async function analizarCarpeta(usuarioPath) {
 }
 
 
-// Función para mover los archivos de una carpeta a otra
+// Función para mover archivos y directorios
 function moverArchivos(oldPath, newPath) {
     const archivos = fs.readdirSync(oldPath);
+
     archivos.forEach((archivo) => {
         const oldFilePath = path.join(oldPath, archivo);
         const newFilePath = path.join(newPath, archivo);
 
-        // Mueve el archivo o directorio
-        fs.renameSync(oldFilePath, newFilePath);
+        // Verifica si es un archivo o un directorio
+        const stats = fs.statSync(oldFilePath);
+
+        try {
+            if (stats.isFile()) {
+                fs.renameSync(oldFilePath, newFilePath);  // Mover archivo
+            } else if (stats.isDirectory()) {
+                // Mover directorio: crear y mover contenido
+                if (!fs.existsSync(newFilePath)) {
+                    fs.mkdirSync(newFilePath, { recursive: true });
+                }
+                moverArchivos(oldFilePath, newFilePath);  // Llamada recursiva
+            }
+        } catch (error) {
+            console.error(`Error moviendo ${oldFilePath} a ${newFilePath}:`, error);
+        }
     });
 }
 
 // Función para analizar todas las carpetas de estudios inicialmente
 async function analizarTodasLasCarpetas() {
-    const estudiosPath = path.join(__dirname, 'estudios');
-    const usuarios = fs.readdirSync(estudiosPath);
+    const usuarios = fs.readdirSync(rutaCarpeta);
 
     // Procesar cada carpeta de usuario en el directorio 'estudios'
+
     for (const usuario of usuarios) {
-        const usuarioPath = path.join(estudiosPath, usuario);
+        const usuarioPath = path.join(rutaCarpeta, usuario);
         await analizarCarpeta(usuarioPath);
     }
 }
@@ -129,53 +145,48 @@ analizarTodasLasCarpetas().then(() => {
 
 // Escuchar eventos en la carpeta específica
 watcher.on('all', async (event, pathParameter) => {
-    const { numeros } = separarLetrasNumeros(path.basename(pathParameter));
+    const nombreCarpeta = path.basename(pathParameter);
+    const { numeros } = separarLetrasNumeros(nombreCarpeta);
+    try {
+        if (event === 'unlinkDir') {
+            console.log(`Carpeta eliminada: ${pathParameter}`);
 
-    if (event === 'unlinkDir') {
-        console.log(`Carpeta eliminada: ${pathParameter}`);
-        if (numeros) {
-            try {
-                // Solo elimina el usuario si no hay una carpeta existente que se haya movido
+            if (numeros) {
                 const carpetasConMismoDNI = fs.readdirSync(path.join(__dirname, 'estudios')).filter(usuario => {
                     return usuario.includes(numeros);
                 });
 
-                // Si no hay carpetas con el mismo DNI, eliminamos al usuario
                 if (carpetasConMismoDNI.length === 0) {
                     await Usuario.findOneAndDelete({ dni: numeros });
                     console.log(`Usuario con dni ${numeros} eliminado de la base de datos.`);
                 } else {
                     console.log(`No se elimina el usuario ${numeros} porque todavía existen carpetas asociadas.`);
                 }
-            } catch (error) {
-                console.error('Error al eliminar usuario:', error);
+            }
+        } else if (event === 'addDir') {
+            console.log(`Carpeta añadida: ${pathParameter}`);
+            if (numeros) {
+                const carpetas = fs.readdirSync(rutaCarpeta);
+                const carpetasConMismoDNI = carpetas.filter(carpeta =>
+                    carpeta.includes(numeros) && carpeta !== nombreCarpeta
+                );
+                if (carpetasConMismoDNI.length > 0) {
+                    const carpetaExistentePath = path.join(rutaCarpeta, carpetasConMismoDNI[0]);
+                    console.log('Comparando rutas:');
+                    console.log('Ruta carpeta existente:', carpetaExistentePath);
+                    console.log('Ruta carpeta nueva:', pathParameter);
+                    // Mover archivos de la carpeta vieja a la nueva
+                    moverArchivos(carpetaExistentePath, pathParameter);
+                    // Eliminar carpeta vieja
+                    fs.rmSync(carpetaExistentePath, { recursive: true });
+                    console.log(`Contenido de ${carpetasConMismoDNI[0]} movido a ${pathParameter}.`);
+                }
+                // Analizar solo la nueva carpeta añadida
+                await analizarCarpeta(pathParameter);
             }
         }
-    } else {
-        console.log(`Carpeta añadida: ${pathParameter}`);
-
-        if (numeros) {
-            // Verifica si ya existe una carpeta con el mismo DNI, excluyendo la carpeta recién añadida
-            const carpetasConMismoDNI = fs.readdirSync(path.join(__dirname, 'estudios')).filter(usuario => {
-                const usuarioPath = path.join(__dirname, 'estudios', usuario);
-                return usuario.includes(numeros) && usuarioPath !== pathParameter; // Asegúrate de excluir la carpeta recién creada
-            });
-
-            // Si hay una carpeta existente con el mismo DNI
-            if (carpetasConMismoDNI.length > 0) {
-                const carpetaExistentePath = path.join(__dirname, 'estudios', carpetasConMismoDNI[0]);
-
-                // Mover todos los archivos de la carpeta existente a la nueva
-                moverArchivos(carpetaExistentePath, pathParameter);
-
-                // Eliminar la carpeta vieja después de mover los archivos
-                fs.rmSync(carpetaExistentePath, { recursive: true });
-
-                console.log(`Contenido de la carpeta ${carpetasConMismoDNI[0]} movido a ${pathParameter} y la carpeta antigua fue eliminada.`);
-            }
-
-            await analizarCarpeta(pathParameter); // Analiza solo la carpeta añadida
-        }
+    } catch (error) {
+        console.error(`Error al procesar evento ${event} en ${pathParameter}:`, error);
     }
 });
 

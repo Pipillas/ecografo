@@ -28,7 +28,7 @@ const ProtectedRoute = ({ element: Component }) => {
 
     // Mientras no se haya validado el token, puedes mostrar un cargando o un placeholder
     if (isValid === null) {
-        return <div>asd</div>;
+        return <div className="content-wrapper"></div>;
     }
 
     // Si el token no es válido, redirige al login
