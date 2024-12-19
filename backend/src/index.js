@@ -143,14 +143,30 @@ analizarTodasLasCarpetas().then(() => {
     console.log("Análisis inicial de todas las carpetas completado.");
 });
 
+// Función para obtener la ruta completa de la carpeta de primer nivel después de "estudios"
+const getFirstLevelFolderPath = (pathToFolder) => {
+    // Obtén la ruta relativa a "estudios"
+    const relativePath = path.relative(rutaCarpeta, pathToFolder);
+
+    // Divídela en segmentos
+    const segments = relativePath.split(path.sep).filter(Boolean);
+
+    // Si hay al menos un segmento, reconstruye la ruta completa del primer nivel
+    if (segments.length > 0) {
+        return path.join(rutaCarpeta, segments[0]);
+    }
+    return null;
+};
+
 // Escuchar eventos en la carpeta específica
 watcher.on('all', async (event, pathParameter) => {
-    const nombreCarpeta = path.basename(pathParameter);
+    // Obtener la ruta completa de la carpeta de primer nivel después de "estudios"
+    const firstLevelFolderPath = getFirstLevelFolderPath(pathParameter);
+    const nombreCarpeta = path.basename(firstLevelFolderPath);
     const { numeros } = separarLetrasNumeros(nombreCarpeta);
     try {
         if (event === 'unlinkDir') {
-            console.log(`Carpeta eliminada: ${pathParameter}`);
-
+            console.log(`Carpeta eliminada: ${firstLevelFolderPath}`);
             if (numeros) {
                 const carpetasConMismoDNI = fs.readdirSync(path.join(__dirname, 'estudios')).filter(usuario => {
                     return usuario.includes(numeros);
@@ -164,7 +180,7 @@ watcher.on('all', async (event, pathParameter) => {
                 }
             }
         } else if (event === 'addDir') {
-            console.log(`Carpeta añadida: ${pathParameter}`);
+            console.log(`Carpeta añadida: ${firstLevelFolderPath}`);
             if (numeros) {
                 const carpetas = fs.readdirSync(rutaCarpeta);
                 const carpetasConMismoDNI = carpetas.filter(carpeta =>
@@ -174,15 +190,15 @@ watcher.on('all', async (event, pathParameter) => {
                     const carpetaExistentePath = path.join(rutaCarpeta, carpetasConMismoDNI[0]);
                     console.log('Comparando rutas:');
                     console.log('Ruta carpeta existente:', carpetaExistentePath);
-                    console.log('Ruta carpeta nueva:', pathParameter);
+                    console.log('Ruta carpeta nueva:', firstLevelFolderPath);
                     // Mover archivos de la carpeta vieja a la nueva
-                    moverArchivos(carpetaExistentePath, pathParameter);
+                    moverArchivos(carpetaExistentePath, firstLevelFolderPath);
                     // Eliminar carpeta vieja
                     fs.rmSync(carpetaExistentePath, { recursive: true });
-                    console.log(`Contenido de ${carpetasConMismoDNI[0]} movido a ${pathParameter}.`);
+                    console.log(`Contenido de ${carpetasConMismoDNI[0]} movido a ${firstLevelFolderPath}.`);
                 }
                 // Analizar solo la nueva carpeta añadida
-                await analizarCarpeta(pathParameter);
+                await analizarCarpeta(firstLevelFolderPath);
             }
         }
     } catch (error) {
