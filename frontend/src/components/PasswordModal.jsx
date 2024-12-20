@@ -127,7 +127,7 @@ const PasswordModal = ({ isOpen, onClose, usuario }) => {
                                     Guardando...
                                 </>
                             ) : (
-                                'Guardar Cambios'
+                                'Guardar'
                             )}
                         </button>
                     </div>

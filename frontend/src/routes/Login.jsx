@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import '../styles/login.css';
 import { socket } from '../main';
+import logo from '../../public/logo.png'
 
 function Login() {
 
@@ -41,9 +42,9 @@ function Login() {
                 <div className="login-form">
                     <div className="form-header">
                         <div className="logo">
-                            <i className="fas fa-shield-alt"></i>
+                            {/* <i className="fas fa-shield-alt"></i> */}
+                            <img src={logo} alt="Logo Ecografia" />
                         </div>
-                        <h1>Bienvenido</h1>
                         <p>Ingrese sus datos</p>
                     </div>
 

@@ -11,7 +11,9 @@ function Estudio({ usuario }) {
     useEffect(() => {
         socket.emit('estudio', id, (response) => {
             if (response.success) {
+                console.log(response);
                 const stringFotos = response.estudio.fotos?.map((foto) => {
+                    console.log(`${IP}/estudios/${usuario.nombre}${usuario.dni}/${response.estudio.nombre}/${foto}`);
                     return `${IP}/estudios/${usuario.nombre}${usuario.dni}/${response.estudio.nombre}/${foto}`;
                 });
                 setFotos(stringFotos);

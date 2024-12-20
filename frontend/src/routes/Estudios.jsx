@@ -89,7 +89,7 @@ function Estudios({ usuario }) {
                                             <button
                                                 onClick={() => fetch(`${IP}/descargar/${estudio.id}`)}
                                                 className="btn-secondary">
-                                                Descargar
+                                                <i class="fa-solid fa-download"></i>
                                             </button>
                                         </div>
                                     </td>

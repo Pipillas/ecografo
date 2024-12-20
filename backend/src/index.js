@@ -20,11 +20,10 @@ app.use(express.json());
 
 // Define la ruta de la carpeta que deseas observar
 // const rutaCarpeta = path.join(__dirname, 'estudios');
-const rutaCarpeta = 'C:/Users/pipas/Escritorio/onedrive juli/OneDrive/estudios';
+const rutaCarpeta = 'C:/Users/pipas/OneDrive/estudios';
 
 // Inicializa el observador en la carpeta "estudios"
 const watcher = chokidar.watch(rutaCarpeta, {
-    depth: 0, // Solo la carpeta principal
     ignored: /(^|[\/\\])\../, // ignora archivos ocultos
     persistent: true,
     ignoreInitial: true,
@@ -96,35 +95,7 @@ async function analizarCarpeta(usuarioPath) {
     } catch (error) {
         console.error('Error al crear o actualizar usuario:', error);
     }
-}
-
-
-// Función para mover archivos y directorios
-function moverArchivos(oldPath, newPath) {
-    const archivos = fs.readdirSync(oldPath);
-
-    archivos.forEach((archivo) => {
-        const oldFilePath = path.join(oldPath, archivo);
-        const newFilePath = path.join(newPath, archivo);
-
-        // Verifica si es un archivo o un directorio
-        const stats = fs.statSync(oldFilePath);
-
-        try {
-            if (stats.isFile()) {
-                fs.renameSync(oldFilePath, newFilePath);  // Mover archivo
-            } else if (stats.isDirectory()) {
-                // Mover directorio: crear y mover contenido
-                if (!fs.existsSync(newFilePath)) {
-                    fs.mkdirSync(newFilePath, { recursive: true });
-                }
-                moverArchivos(oldFilePath, newFilePath);  // Llamada recursiva
-            }
-        } catch (error) {
-            console.error(`Error moviendo ${oldFilePath} a ${newFilePath}:`, error);
-        }
-    });
-}
+};
 
 // Función para analizar todas las carpetas de estudios inicialmente
 async function analizarTodasLasCarpetas() {
@@ -134,6 +105,7 @@ async function analizarTodasLasCarpetas() {
 
     for (const usuario of usuarios) {
         const usuarioPath = path.join(rutaCarpeta, usuario);
+        console.log(usuarioPath);
         await analizarCarpeta(usuarioPath);
     }
 }
@@ -158,52 +130,9 @@ const getFirstLevelFolderPath = (pathToFolder) => {
     return null;
 };
 
-// Escuchar eventos en la carpeta específica
 watcher.on('all', async (event, pathParameter) => {
-    // Obtener la ruta completa de la carpeta de primer nivel después de "estudios"
     const firstLevelFolderPath = getFirstLevelFolderPath(pathParameter);
-    const nombreCarpeta = path.basename(firstLevelFolderPath);
-    const { numeros } = separarLetrasNumeros(nombreCarpeta);
-    try {
-        if (event === 'unlinkDir') {
-            console.log(`Carpeta eliminada: ${firstLevelFolderPath}`);
-            if (numeros) {
-                const carpetasConMismoDNI = fs.readdirSync(path.join(__dirname, 'estudios')).filter(usuario => {
-                    return usuario.includes(numeros);
-                });
-
-                if (carpetasConMismoDNI.length === 0) {
-                    await Usuario.findOneAndDelete({ dni: numeros });
-                    console.log(`Usuario con dni ${numeros} eliminado de la base de datos.`);
-                } else {
-                    console.log(`No se elimina el usuario ${numeros} porque todavía existen carpetas asociadas.`);
-                }
-            }
-        } else if (event === 'addDir') {
-            console.log(`Carpeta añadida: ${firstLevelFolderPath}`);
-            if (numeros) {
-                const carpetas = fs.readdirSync(rutaCarpeta);
-                const carpetasConMismoDNI = carpetas.filter(carpeta =>
-                    carpeta.includes(numeros) && carpeta !== nombreCarpeta
-                );
-                if (carpetasConMismoDNI.length > 0) {
-                    const carpetaExistentePath = path.join(rutaCarpeta, carpetasConMismoDNI[0]);
-                    console.log('Comparando rutas:');
-                    console.log('Ruta carpeta existente:', carpetaExistentePath);
-                    console.log('Ruta carpeta nueva:', firstLevelFolderPath);
-                    // Mover archivos de la carpeta vieja a la nueva
-                    moverArchivos(carpetaExistentePath, firstLevelFolderPath);
-                    // Eliminar carpeta vieja
-                    fs.rmSync(carpetaExistentePath, { recursive: true });
-                    console.log(`Contenido de ${carpetasConMismoDNI[0]} movido a ${firstLevelFolderPath}.`);
-                }
-                // Analizar solo la nueva carpeta añadida
-                await analizarCarpeta(firstLevelFolderPath);
-            }
-        }
-    } catch (error) {
-        console.error(`Error al procesar evento ${event} en ${pathParameter}:`, error);
-    }
+    await analizarCarpeta(firstLevelFolderPath);
 });
 
 // Configuración del servidor y socket.io
