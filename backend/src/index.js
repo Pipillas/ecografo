@@ -22,11 +22,15 @@ app.use(express.json());
 // const rutaCarpeta = path.join(__dirname, 'estudios');
 const rutaCarpeta = 'C:/Users/pipas/OneDrive/estudios';
 
-// Inicializa el observador en la carpeta "estudios"
 const watcher = chokidar.watch(rutaCarpeta, {
-    ignored: /(^|[\/\\])\../, // ignora archivos ocultos
     persistent: true,
     ignoreInitial: true,
+    usePolling: true,
+    awaitWriteFinish: {
+        stabilityThreshold: 2000, // Tiempo de espera más largo si los archivos se escriben muy rápido
+        pollInterval: 500,
+    },
+    interval: 500, // Intervalo entre las verificaciones
 });
 
 // Función para separar letras y números
@@ -35,11 +39,51 @@ const separarLetrasNumeros = (str) => {
     return resultado ? { letras: resultado[1], numeros: resultado[2] } : { letras: null, numeros: null };
 };
 
+async function copiarArchivos(origen, destino) {
+    try {
+        // Leer los archivos de la carpeta origen de forma sincrónica
+        const archivos = fs.readdirSync(origen);
+
+        // Asegurarse de que la carpeta destino existe, si no, crearla
+        if (!fs.existsSync(destino)) {
+            fs.mkdirSync(destino);
+        }
+
+        // Iterar sobre cada archivo de la carpeta origen
+        for (const archivo of archivos) {
+            const origenArchivo = path.join(origen, archivo);
+            const destinoArchivo = path.join(destino, archivo);
+
+            if (origenArchivo === destinoArchivo) {
+                console.log(`El archivo ${archivo} ya existe en el destino, se omitirá la copia.`);
+                continue;
+            }
+
+            // Copiar el archivo de origen a destino de forma sincrónica
+            fs.copyFileSync(origenArchivo, destinoArchivo);
+            console.log(`Archivo ${archivo} copiado correctamente.`);
+        }
+
+    } catch (err) {
+        console.error('Error al copiar archivos:', err);
+    }
+}
+
 // Función para analizar una sola carpeta específica de usuario
 async function analizarCarpeta(usuarioPath) {
     const usuarioNombre = path.basename(usuarioPath);
     const { letras, numeros } = separarLetrasNumeros(usuarioNombre);
     if (!letras || !numeros) return; // Salir si no se puede extraer letras y números
+
+    const usuarios = fs.readdirSync(rutaCarpeta);
+
+    for (let i = 0; i < usuarios.length; i++) {
+        const data = separarLetrasNumeros(usuarios[i]);
+        if (!data.numeros) return; // Salir si no se puede extraer letras y números
+        if (numeros === data.numeros) {
+            copiarArchivos(path.join(rutaCarpeta, usuarios[i]), usuarioPath);
+        };
+    };
 
     const estudiosArray = [];
     const estudios = fs.readdirSync(usuarioPath);
@@ -91,7 +135,7 @@ async function analizarCarpeta(usuarioPath) {
             { upsert: true, new: true }
         );
 
-        console.log(`Usuario ${numeros} creado o actualizado con éxito.`);
+        //console.log(`Usuario ${numeros} creado o actualizado con éxito.`);
     } catch (error) {
         console.error('Error al crear o actualizar usuario:', error);
     }
@@ -110,11 +154,6 @@ async function analizarTodasLasCarpetas() {
     }
 }
 
-// Ejecutar el análisis inicial de todas las carpetas
-analizarTodasLasCarpetas().then(() => {
-    console.log("Análisis inicial de todas las carpetas completado.");
-});
-
 // Función para obtener la ruta completa de la carpeta de primer nivel después de "estudios"
 const getFirstLevelFolderPath = (pathToFolder) => {
     // Obtén la ruta relativa a "estudios"
@@ -130,9 +169,28 @@ const getFirstLevelFolderPath = (pathToFolder) => {
     return null;
 };
 
+async function borrarUsuario(usuarioPath) {
+    const usuarioNombre = path.basename(usuarioPath);
+    const { letras, numeros } = separarLetrasNumeros(usuarioNombre);
+    if (!letras || !numeros) return; // Salir si no se puede extraer letras y números
+    try {
+        // Intentar borrar el usuario en base al `dni`
+        const resultado = await Usuario.deleteOne({ dni: numeros });
+        if (resultado.deletedCount > 0) {
+            console.log(`Usuario con DNI ${numeros} borrado con éxito.`);
+        }
+    } catch (error) {
+        console.error('Error al borrar usuario:', error);
+    }
+}
+
 watcher.on('all', async (event, pathParameter) => {
     const firstLevelFolderPath = getFirstLevelFolderPath(pathParameter);
-    await analizarCarpeta(firstLevelFolderPath);
+    if (event === 'add' || event === 'addDir') {
+        await analizarCarpeta(firstLevelFolderPath);
+    } else if (event === 'unlink' || event === 'unlinkDir') {
+        await borrarUsuario(firstLevelFolderPath);
+    }
 });
 
 // Configuración del servidor y socket.io
@@ -227,6 +285,9 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(distPath, 'index.html'));
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
     console.log(`Server listening on port ${PORT}`);
+    await new Promise(res => setTimeout(res, 3000));
+    await analizarTodasLasCarpetas();
+    console.log('Carpetas analizadas');
 });
