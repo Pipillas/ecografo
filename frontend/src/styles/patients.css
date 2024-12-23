@@ -2,6 +2,8 @@
     max-width: 1200px;
     margin: 20px auto;
     padding: 20px;
+    display: flex;
+    gap: 20px;
 }
 
 .search-container {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import '../styles/login.css';
 import { socket } from '../main';
-import logo from '../../public/logo.png'
+import logo from '../assets/logo.png';
 
 function Login() {
 
