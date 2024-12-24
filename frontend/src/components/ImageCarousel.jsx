@@ -12,6 +12,10 @@ const ImageWithEffects = forwardRef(({ src, filters, zoom, offsetX, offsetY, onM
     })
   };
 
+  if (src && typeof src === 'string' && src.endsWith('.pdf')) {
+    return <embed width={'100%'} height={'100%'} src={`${src}#toolbar=0&navpanes=0&scrollbar=0`} type="application/pdf"></embed>;
+  }
+
   return (
     <img
       ref={ref}
@@ -129,7 +133,6 @@ const FilterImage = ({ images }) => {
   const handleWheel = (event) => {
     if (isMobile) return;
 
-    event.preventDefault();
     const deltaY = event.deltaY;
     const scaleChange = deltaY > 0 ? 0.9 : 1.1;
     let newScale = zoom.scale * scaleChange;
@@ -338,8 +341,40 @@ const FilterImage = ({ images }) => {
           )}
         </div>
       </div>
-
       {showThumbnails && (
+        <div className="thumbnails-panel">
+          <div className="thumbnails-scroll">
+            {images.map((image, index) => {
+              // Verificar si es un PDF
+              if (typeof image === 'string' && image.endsWith('.pdf')) {
+                return (
+                  <div
+                    key={index}
+                    className={`thumbnail ${currentImageIndex === index ? 'active' : ''}`}
+                    onClick={() => setCurrentImageIndex(index)}
+                    title={`PDF ${index + 1}`}
+                  >
+                    <embed src={`${image}#toolbar=0&navpanes=0&scrollbar=0`} type="application/pdf" width="100" height="75" />
+                    <div className="thumbnail-number">{index + 1}</div>
+                  </div>
+                );
+              }
+              return (
+                <div
+                  key={index}
+                  className={`thumbnail ${currentImageIndex === index ? 'active' : ''}`}
+                  onClick={() => setCurrentImageIndex(index)}
+                  title={`Imagen ${index + 1}`}
+                >
+                  <img src={image} alt={`Thumbnail ${index + 1}`} />
+                  <div className="thumbnail-number">{index + 1}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      {/* {showThumbnails && (
         <div className="thumbnails-panel">
           <div className="thumbnails-scroll">
             {images.map((image, index) => (
@@ -355,7 +390,8 @@ const FilterImage = ({ images }) => {
             ))}
           </div>
         </div>
-      )}
+      )} */}
+
     </div>
   );
 };

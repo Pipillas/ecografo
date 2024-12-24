@@ -4,7 +4,8 @@ import '../styles/patients.css';
 import { socket, IP } from '../main';
 
 const Informes = () => {
-    const [estudios, setEstudios] = useState([]);
+    const [estudiosInformados, setEstudiosInformados] = useState([]);
+    const [estudiosNoInformados, setEstudiosNoInformados] = useState([]);
 
     const cerrarSesion = () => {
         localStorage.clear();
@@ -12,14 +13,14 @@ const Informes = () => {
     };
 
     // Función para manejar la subida del archivo
-    const handleFileChange = (e, dni) => {
+    const handleFileChange = (e, patient, estNombre, estId) => {
         const file = e.target.files[0];
         if (file && file.type === 'application/pdf') {
             const formData = new FormData();
             formData.append('file', file);
-            formData.append('dni', dni);  // Pasamos el DNI del paciente al backend
+            formData.append('id', estId);
             // Usar fetch para enviar el archivo al backend
-            fetch(`${IP}/upload`, {
+            fetch(`${IP}/upload/${patient.nombre}${patient.dni}/${estNombre}`, {
                 method: 'POST',
                 body: formData,  // El cuerpo de la solicitud es el FormData
             })
@@ -35,11 +36,20 @@ const Informes = () => {
         }
     };
 
+    const fetchData = () => {
+        socket.emit('informes', (response) => {
+            setEstudiosInformados(response.estudiosInformados)
+            setEstudiosNoInformados(response.estudiosNoInformados)
+        });
+    };
+
     // Reset página cuando se busca
     useEffect(() => {
-        socket.emit('informes', (response) => {
-            console.log(response);
-        });
+        socket.on('cambios', fetchData);
+        fetchData();
+        return () => {
+            socket.off('cambios');
+        }
     }, []);
 
     return (
@@ -51,22 +61,27 @@ const Informes = () => {
                         <tr>
                             <th>DNI</th>
                             <th>Nombre</th>
+                            <th></th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
-                        {estudios.map((patient) => (
-                            <tr key={patient.dni}>
-                                <td>{patient.dni}</td>
-                                <td>{patient.nombre.replaceAll('_', ' ')}</td>
-                                <td>
-                                    <input
-                                        type="file"
-                                        accept=".pdf"
-                                        onChange={(e) => handleFileChange(e, patient.dni)}
-                                    />
-                                </td>
-                            </tr>
-                        ))}
+                        {estudiosNoInformados.map((patient) => {
+                            return patient.estudios.map((est) =>
+                                <tr key={est.id}>
+                                    <td>{patient.dni}</td>
+                                    <td>{patient.nombre.replaceAll('_', ' ')}</td>
+                                    <td>{est.nombre}</td>
+                                    <td>
+                                        <input
+                                            type="file"
+                                            accept=".pdf"
+                                            onChange={(e) => handleFileChange(e, patient, est.nombre, est.id)}
+                                        />
+                                    </td>
+                                </tr>
+                            )
+                        })}
                     </tbody>
                 </table>
                 <table className="patients-table">
@@ -74,22 +89,29 @@ const Informes = () => {
                         <tr>
                             <th>DNI</th>
                             <th>Nombre</th>
+                            <th></th>
+                            <th></th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
-                        {estudios.map((patient) => (
-                            <tr key={patient.dni}>
-                                <td>{patient.dni}</td>
-                                <td>{patient.nombre.replaceAll('_', ' ')}</td>
-                                <td>
-                                    <input
-                                        type="file"
-                                        accept=".pdf"
-                                        onChange={(e) => handleFileChange(e, patient.dni)}
-                                    />
-                                </td>
-                            </tr>
-                        ))}
+                        {estudiosInformados.map((patient) => {
+                            return patient.estudios.map((est) =>
+                                <tr key={est.id}>
+                                    <td>{patient.dni}</td>
+                                    <td>{patient.nombre.replaceAll('_', ' ')}</td>
+                                    <td>{est.nombre}</td>
+                                    <td>
+                                        <input
+                                            type="file"
+                                            accept=".pdf"
+                                            onChange={(e) => handleFileChange(e, patient, est.nombre, est.id)}
+                                        />
+                                    </td>
+                                    <td onClick={() => socket.emit('cambiar-informe', est.id)}>Cancelar</td>
+                                </tr>
+                            )
+                        })}
                     </tbody>
                 </table>
             </div>

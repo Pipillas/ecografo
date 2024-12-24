@@ -35,19 +35,14 @@ const watcher = chokidar.watch(rutaCarpeta, {
 });
 
 
-// Configuración de multer para manejar archivos
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        // Guardar los archivos en una carpeta llamada 'uploads'
-        const uploadPath = path.join(__dirname, 'uploads');
-        if (!fs.existsSync(uploadPath)) {
-            fs.mkdirSync(uploadPath);
-        }
+        const normalizedPath = path.normalize(rutaCarpeta);
+        const uploadPath = path.join(normalizedPath, req.params.usuario, req.params.estudioNombre);
         cb(null, uploadPath);
     },
     filename: (req, file, cb) => {
-        // Asignar un nombre único al archivo usando el DNI del paciente
-        const filename = `${req.body.dni}_${Date.now()}.pdf`; // Nombre del archivo como DNI + timestamp
+        const filename = `${Date.now()}.pdf`;
         cb(null, filename);
     }
 });
@@ -129,24 +124,21 @@ async function analizarCarpeta(usuarioPath) {
     for (const estudio of estudios) {
         const fotos_estudios = fs.readdirSync(path.join(usuarioPath, estudio));
         // Si el estudio ya existe en la base de datos, recuperar su `id`
-        let estudioId;
-        let informado;
+        let estudioId = uuidv4();
+        let informado = false;
+        let pathInforme;
         const estudioExistente = await Usuario.findOne(
             { dni: numeros, "estudios.nombre": estudio },
             { "estudios.$": 1 }
         );
-
         if (estudioExistente) {
             // Si el estudio ya tiene un `id`, usar el existente
             estudioId = estudioExistente.estudios[0].id;
             informado = estudioExistente.estudios[0].informado;
-        } else {
-            // Si no tiene un `id`, generar uno nuevo
-            estudioId = uuidv4();
-            informado = false;
-        }
+            pathInforme = estudioExistente.estudios[0].path;
+        };
         estudiosArray.push({
-            nombre: estudio, fotos: fotos_estudios, id: estudioId, informado
+            nombre: estudio, fotos: fotos_estudios, id: estudioId, informado, path: pathInforme,
         });
     }
     // Crear el objeto base del usuario
@@ -221,7 +213,7 @@ watcher.on('all', async (event, pathParameter) => {
         if (event === 'add' || event === 'addDir') {
             await analizarCarpeta(firstLevelFolderPath);
         } else if (event === 'unlink' || event === 'unlinkDir') {
-            await borrarUsuario(firstLevelFolderPath);
+            //await borrarUsuario(firstLevelFolderPath);
         }
     } catch (error) {
         console.error(`Error al manejar evento ${event} para ${pathParameter}:`, error);
@@ -302,66 +294,41 @@ io.on('connection', (socket) => {
         }
     });
     socket.on('informes', async (callback) => {
-        try {
-            // Realizamos una agregación para obtener los usuarios con sus estudios clasificados
-            const usuarios = await Usuario.aggregate([
-                {
-                    // Desglosamos los estudios en dos categorías: informados y no informados
-                    $project: {
-                        dni: 1,
-                        clave: 1,
-                        createdAt: 1,
-                        estudiosInformados: {
-                            $filter: {
-                                input: "$estudios",
-                                as: "estudio",
-                                cond: { $eq: ["$$estudio.informado", true] } // Filtra los estudios informados
-                            }
-                        },
-                        estudiosNoInformados: {
-                            $filter: {
-                                input: "$estudios",
-                                as: "estudio",
-                                cond: { $eq: ["$$estudio.informado", false] } // Filtra los estudios no informados
-                            }
-                        }
-                    }
-                },
-                {
-                    // Solo devolver usuarios que tengan estudios informados o no informados
-                    $match: {
-                        $or: [
-                            { "estudiosInformados.0": { $exists: true } }, // Tiene estudios informados
-                            { "estudiosNoInformados.0": { $exists: true } } // O tiene estudios no informados
-                        ]
-                    }
-                }
-            ]);
+        const usuariosInformados = await Usuario.find({ "estudios.informado": true });
+        const estudiosInformados = usuariosInformados.map(usuario => ({
+            ...usuario.toObject(), // Convierte el documento de Mongoose a un objeto plano
+            estudios: usuario.estudios.filter(estudio => estudio.informado === true),
+        }));
 
-            // Filtramos los usuarios con estudios informados y no informados
-            const usuariosInformados = usuarios.filter(usuario => usuario.estudiosInformados.length > 0);
-            const usuariosNoInformados = usuarios.filter(usuario => usuario.estudiosNoInformados.length > 0);
+        const usuariosNoInformados = await Usuario.find({ "estudios.informado": false });
+        const estudiosNoInformados = usuariosNoInformados.map(usuario => ({
+            ...usuario.toObject(), // Convierte el documento de Mongoose a un objeto plano
+            estudios: usuario.estudios.filter(estudio => estudio.informado === false),
+        }));
 
-            // Devolvemos los usuarios clasificados
-            callback({
-                usuariosInformados,
-                usuariosNoInformados
-            });
-
-        } catch (error) {
-            console.error('Error al obtener los informes:', error);
-            callback({ error: 'Hubo un problema al obtener los informes.' });
-        }
+        callback({ estudiosInformados, estudiosNoInformados });
     });
-
+    socket.on('cambiar-informe', async (id) => {
+        await Usuario.findOneAndUpdate(
+            { "estudios.id": id },
+            { $set: { "estudios.$.informado": false } }, // Actualiza solo el elemento del array que coincide
+        );
+        io.emit('cambios');
+    });
 });
 
 // Inicio del servidor
 const PORT = process.env.PORT || 3000;
 
 // Endpoint para recibir el archivo
-app.post('/upload', upload.single('file'), (req, res) => {
+app.post('/upload/:usuario/:estudioNombre', upload.single('file'), async (req, res) => {
     try {
+        console.log(req.file);
+        await Usuario.findOneAndUpdate(
+            { "estudios.id": req.body.id },
+            { $set: { "estudios.$.informado": true, "estudios.$.path": req.file.path } }, // Actualiza solo el elemento del array que coincide
+        );
+        io.emit('cambios');
         res.status(200).send({ message: 'Archivo subido correctamente', file: req.file });
     } catch (error) {
         res.status(500).send({ error: 'Error al subir el archivo' });
