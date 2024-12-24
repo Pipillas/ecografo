@@ -16,27 +16,38 @@ const Informes = () => {
     };
 
     const handleFileChange = (e, patient, estNombre, estId) => {
-        const file = e.target.files[0];
-        if (file && file.type === 'application/pdf') {
-            setUploadingStudyId(estId); // Marcar que estamos subiendo este estudio
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('id', estId);
+        const fileInput = e.target;           // Guardamos la referencia al input
+        const file = fileInput.files[0];      // Tomamos el archivo seleccionado
 
-            fetch(`${IP}/upload/${patient.nombre}${patient.dni}/${estNombre}`, {
-                method: 'POST',
-                body: formData,
-            })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Archivo subido con éxito:', data);
-                })
-                .catch(error => {
-                    console.log('Error al subir el archivo:', error);
-                });
-        } else {
+        if (!file) return;                    // Si no hay archivo (el usuario canceló)
+
+        if (file.type !== 'application/pdf') {
             alert('Solo se permiten archivos PDF');
+            fileInput.value = null; // Limpia el valor para permitir una nueva subida
+            return;
         }
+
+        // Marcar que estamos subiendo este estudio
+        setUploadingStudyId(estId);
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('id', estId);
+
+        fetch(`${IP}/upload/${patient.nombre}${patient.dni}/${estNombre}`, {
+            method: 'POST',
+            body: formData,
+        })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Archivo subido con éxito:', data);
+            })
+            .catch(error => {
+                alert(`Error al subir el archivo: ${error}`);
+                setUploadingStudyId(null);    // Asegurar volver a estado normal
+                fileInput.value = null;       // Limpiar el input aunque haya error
+                console.log('Error al subir el archivo:', error);
+            });
     };
 
 
@@ -60,6 +71,44 @@ const Informes = () => {
         // Formateamos a DD/MM/YY (sólo últimos 2 dígitos del año) HH:MM
         const shortYear = year.slice(-2);
         return `${initials} ${day}/${month}/${shortYear} ${hour}:${minute}`;
+    }
+
+    function extractDateFromStudyName(studyName) {
+        // Asumiendo formato "EEEYYYYMMDDHHmm"
+        const year = studyName.substring(3, 7);   // "2023"
+        const month = studyName.substring(7, 9);  // "10"
+        const day = studyName.substring(9, 11);   // "09"
+        const hour = studyName.substring(11, 13); // "10"
+        const minute = studyName.substring(13, 15); // "30"
+
+        // Devolvemos un string "YYYYMMDDHHmm"
+        return `${year}${month}${day}${hour}${minute}`;
+    }
+
+    const sortedStudies = flattenEstudios(estudiosNoInformados).sort((a, b) => {
+        const dateA = extractDateFromStudyName(a.nombreEstudio);
+        const dateB = extractDateFromStudyName(b.nombreEstudio);
+
+        // Si querés lo más viejo primero:
+        return dateA.localeCompare(dateB);
+    });
+
+    function flattenEstudios(estudiosNoInformados) {
+        const allStudies = [];
+
+        estudiosNoInformados.forEach((patient) => {
+            patient.estudios.forEach((est) => {
+                // Anexamos la info del paciente dentro del propio "estudio"
+                allStudies.push({
+                    id: est.id,
+                    nombreEstudio: est.nombre,        // "EEE202311081430"
+                    dni: patient.dni,
+                    nombrePaciente: patient.nombre,   // "Juan_Perez"
+                });
+            });
+        });
+
+        return allStudies;
     }
 
     useEffect(() => {
@@ -126,35 +175,44 @@ const Informes = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {estudiosNoInformados.map((patient) => {
-                                            return patient.estudios.map((est) => (
-                                                <tr onClick={() => window.open(`/estudio/${est.id}`)} key={est.id}>
-                                                    <td>{patient.dni}</td>
-                                                    <td className="nombre">{patient.nombre.replaceAll('_', ' ')}</td>
-                                                    <td>{formatStudyString(est.nombre)}</td>
-                                                    <td onClick={(e) => e.stopPropagation()}>
-                                                        <label className="action-button custom-file-upload">
-                                                            <input
-                                                                type="file"
-                                                                accept=".pdf"
-                                                                onChange={(e) => handleFileChange(e, patient, est.nombre, est.id)}
-                                                            />
-                                                            {
-                                                                uploadingStudyId === est.id
-                                                                    ? <i className="fas fa-spinner fa-spin"></i> // Ícono de spinner
-                                                                    : 'Subir'
-                                                            }
-                                                        </label>
-                                                    </td>
-                                                </tr>
-                                            ));
-                                        })}
+                                        {sortedStudies.map((study) => (
+                                            <tr
+                                                key={study.id}
+                                                onClick={() => window.open(`/estudio/${study.id}`)}
+                                            >
+                                                {/* DNI y nombre del paciente (reemplazando '_' por espacio) */}
+                                                <td>{study.dni}</td>
+                                                <td className="nombre">{study.nombrePaciente.replaceAll('_', ' ')}</td>
+                                                {/* Formateamos el nombre del estudio (EEE + dd/mm/yy HH:mm) */}
+                                                <td>{formatStudyString(study.nombreEstudio)}</td>
+                                                {/* Botón de subir archivo (evitamos que el click abra el estudio) */}
+                                                <td onClick={(e) => e.stopPropagation()}>
+                                                    <label className="action-button custom-file-upload">
+                                                        <input
+                                                            type="file"
+                                                            accept=".pdf"
+                                                            onChange={(e) => handleFileChange(
+                                                                e,
+                                                                // simulamos "patient" con los datos mínimos
+                                                                { nombre: study.nombrePaciente, dni: study.dni },
+                                                                study.nombreEstudio,
+                                                                study.id
+                                                            )}
+                                                        />
+                                                        {
+                                                            uploadingStudyId === study.id
+                                                                ? <i className="fas fa-spinner fa-spin"></i>
+                                                                : 'Subir'
+                                                        }
+                                                    </label>
+                                                </td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>
                         </div>
                     </div>
-
                     <div className="table-section">
                         <h2 className="table-title">Estudios Informados</h2>
                         <div className="responsive-table">

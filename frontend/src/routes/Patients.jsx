@@ -111,7 +111,7 @@ const Patients = () => {
                                                     }}
                                                     className="action-button cancel-action"
                                                 >
-                                                    Reset Contraseña
+                                                    Reset
                                                 </button>
                                             </td>
                                         </tr>

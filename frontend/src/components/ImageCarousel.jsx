@@ -107,11 +107,20 @@ const FilterImage = ({ images }) => {
     const isLeftSwipe = distance > minSwipeDistance;
     const isRightSwipe = distance < -minSwipeDistance;
 
-    if (isLeftSwipe && currentImageIndex < images.length - 1) {
-      navigateImages(1);
+    if (isLeftSwipe) {
+      if (currentImageIndex < images.length - 1) {
+        navigateImages(1); // Ir a la siguiente imagen
+      } else {
+        navigateImages(0 - (images.length - 1)); // Ir a la primera imagen (circular)
+      }
     }
-    if (isRightSwipe && currentImageIndex > 0) {
-      navigateImages(-1);
+
+    if (isRightSwipe) {
+      if (currentImageIndex > 0) {
+        navigateImages(-1); // Ir a la imagen anterior
+      } else {
+        navigateImages(images.length - 1); // Ir a la última imagen (circular)
+      }
     }
   };
 

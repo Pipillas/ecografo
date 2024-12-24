@@ -58,7 +58,8 @@ const upload = multer({
             return cb(new Error('Solo se permiten archivos PDF'), false);
         }
         cb(null, true);
-    }
+    },
+    limits: { fileSize: 50 * 1024 * 1024 } // 50 MB
 });
 
 // Función para separar letras y números
