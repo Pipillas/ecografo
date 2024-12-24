@@ -79,6 +79,11 @@ const FilterImage = ({ images }) => {
       setIsMobile(window.innerWidth <= 768);
     };
 
+    // Establecer foco en el contenedor al montar
+    if (containerRef.current) {
+      containerRef.current.focus();
+    }
+
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -213,8 +218,25 @@ const FilterImage = ({ images }) => {
   };
 
   const navigateImages = (direction) => {
+    const totalImages = images.length;
+
+    // Si estamos en la última imagen y avanzamos, ir a la primera
+    if (currentImageIndex === totalImages - 1 && direction === 1) {
+      setCurrentImageIndex(0);
+      resetImage();
+      return;
+    }
+
+    // Si estamos en la primera imagen y retrocedemos, ir a la última
+    if (currentImageIndex === 0 && direction === -1) {
+      setCurrentImageIndex(totalImages - 1);
+      resetImage();
+      return;
+    }
+
+    // Cambiar la imagen normalmente
     const newIndex = currentImageIndex + direction;
-    if (newIndex >= 0 && newIndex < images.length) {
+    if (newIndex >= 0 && newIndex < totalImages) {
       setCurrentImageIndex(newIndex);
       resetImage();
     }
@@ -354,7 +376,14 @@ const FilterImage = ({ images }) => {
                     onClick={() => setCurrentImageIndex(index)}
                     title={`PDF ${index + 1}`}
                   >
-                    <embed src={`${image}#toolbar=0&navpanes=0&scrollbar=0`} type="application/pdf" width="100" height="75" />
+                    {/* Contenedor para garantizar el clic */}
+                    <div className="thumbnail-overlay" />
+                    <embed
+                      src={`${image}#toolbar=0&navpanes=0&scrollbar=0`}
+                      type="application/pdf"
+                      width="100"
+                      height="75"
+                    />
                     <div className="thumbnail-number">{index + 1}</div>
                   </div>
                 );

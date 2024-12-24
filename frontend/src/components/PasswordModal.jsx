@@ -50,7 +50,7 @@ const PasswordModal = ({ isOpen, onClose, usuario }) => {
                 setTimeout(() => {
                     onClose();
                     setSuccess('');
-                }, 2000);
+                }, 500);
             }
         });
     };

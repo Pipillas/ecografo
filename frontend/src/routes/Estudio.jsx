@@ -1,28 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { socket, IP } from '../main';
+import { socket } from '../main';
 import ImageCarousel from '../components/ImageCarousel';
 
-function Estudio({ usuario }) {
-
+function Estudio() {
     const [fotos, setFotos] = useState([]);
     const id = useParams().id;
 
     useEffect(() => {
         socket.emit('estudio', id, (response) => {
             if (response.success) {
-                const stringFotos = response.estudio.fotos?.map((foto) => {
-                    return `${IP}/estudios/${usuario.nombre}${usuario.dni}/${response.estudio.nombre}/${foto}`;
-                });
-                setFotos(stringFotos);
+                setFotos(response.estudio.fotos); // Usar directamente las URLs devueltas
             } else {
                 console.error(response.error);
             }
         });
     }, [id]);
 
-    return <ImageCarousel images={fotos} />
-
+    return <ImageCarousel images={fotos} />;
 }
 
 export default Estudio;

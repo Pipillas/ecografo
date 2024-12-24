@@ -1,21 +1,41 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react';
 import '../styles/login.css';
 import { socket } from '../main';
 import logo from '../assets/logo.png';
 
 function Login() {
-
     const [showPassword, setShowPassword] = useState(false);
     const [usuario, setUsuario] = useState({
         dni: '',
-        clave: ''
+        clave: '',
     });
     const [mensajeError, setMensajeError] = useState('');
+    const [validandoToken, setValidandoToken] = useState(true); // Estado para verificar si el token es válido
+
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            // Validar el token al cargar la página
+            socket.emit('validate-token', token, (response) => {
+                if (response.valid) {
+                    if (response.admin) {
+                        window.location.href = "/informes";
+                    } else {
+                        window.location.href = "/estudios";
+                    }
+                } else {
+                    setValidandoToken(false); // Token inválido, muestra el formulario
+                }
+            });
+        } else {
+            setValidandoToken(false); // No hay token, muestra el formulario
+        }
+    }, []);
 
     const inputChangeHandler = (e) => {
-        setUsuario(prev => ({
+        setUsuario((prev) => ({
             ...prev,
-            [e.target.name]: e.target.value
+            [e.target.name]: e.target.value,
         }));
     };
 
@@ -23,7 +43,11 @@ function Login() {
         socket.emit('entrar', usuario, (response) => {
             if (response.success) {
                 localStorage.setItem('token', response.token);
-                window.location.href = '/estudios';
+                if (response.admin) {
+                    window.location.href = "/informes";
+                } else {
+                    window.location.href = "/estudios";
+                }
             } else {
                 setMensajeError(response.message);
             }
@@ -36,14 +60,18 @@ function Login() {
         }
     };
 
+    if (validandoToken) {
+        // Muestra un mensaje o animación mientras se valida el token
+        return <div className="content-wrapper">Validando sesión...</div>;
+    }
+
     return (
         <div className="login-container">
             <div className="login-card">
                 <div className="login-form">
                     <div className="form-header">
                         <div className="logo">
-                            {/* <i className="fas fa-shield-alt"></i> */}
-                            <img src={logo} alt="Logo Ecografia" />
+                            <img src={logo} alt="Logo Ecografía" />
                         </div>
                         <p>Ingrese sus datos</p>
                     </div>
@@ -52,8 +80,8 @@ function Login() {
                         <div className="input-with-icon">
                             <i className="fas fa-id-card"></i>
                             <input
-                                autoComplete='off'
-                                name='dni'
+                                autoComplete="off"
+                                name="dni"
                                 onChange={inputChangeHandler}
                                 onKeyUp={handleKeyPress}
                                 value={usuario.dni}
@@ -68,8 +96,8 @@ function Login() {
                         <div className="input-with-icon">
                             <i className="fas fa-lock"></i>
                             <input
-                                autoComplete='off'
-                                name='clave'
+                                autoComplete="off"
+                                name="clave"
                                 onChange={inputChangeHandler}
                                 onKeyUp={handleKeyPress}
                                 value={usuario.clave}
@@ -77,7 +105,12 @@ function Login() {
                                 placeholder="Ingrese su clave"
                                 className="form-input"
                             />
-                            <button tabIndex="-1" onClick={() => setShowPassword(prev => !prev)} type="button" className="toggle-password">
+                            <button
+                                tabIndex="-1"
+                                onClick={() => setShowPassword((prev) => !prev)}
+                                type="button"
+                                className="toggle-password"
+                            >
                                 <i className="far fa-eye"></i>
                             </button>
                         </div>
@@ -86,7 +119,7 @@ function Login() {
                     <div className="mensaje-error">{mensajeError}</div>
 
                     <div className="forgot-password">
-                        <a href="#" className="hover-underline">Recuperar clave</a>
+                        <a href='#' onClick={() => setMensajeError('Para recuperar la contraseña contactese al 291-XXX-XXXX')} className="hover-underline">Recuperar clave</a>
                     </div>
 
                     <button onClick={entrar} className="submit-button">
@@ -97,8 +130,8 @@ function Login() {
                     </button>
                 </div>
             </div>
-        </div >
-    )
+        </div>
+    );
 }
 
 export default Login;

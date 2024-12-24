@@ -9,6 +9,7 @@ const { Usuario, dbConnection } = require('./database');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const multer = require('multer');
+const bcrypt = require('bcrypt'); // <--- Asegúrate de que lo tengas instalado
 
 const app = express();
 const server = http.createServer(app);
@@ -22,6 +23,7 @@ app.use(express.json());
 // Define la ruta de la carpeta que deseas observar
 // const rutaCarpeta = 'C:/Users/pipas/OneDrive/estudios';
 const rutaCarpeta = 'C:/Users/Pipas/Desktop/prueba';
+const IP = 'http://192.168.0.26:3000';
 
 const watcher = chokidar.watch(rutaCarpeta, {
     persistent: true,
@@ -114,8 +116,6 @@ async function analizarCarpeta(usuarioPath) {
         const data = separarLetrasNumeros(usuarios[i]);
         if (!data.numeros) return; // Salir si no se puede extraer letras y números
         if (numeros === data.numeros && usuarios[i] !== usuarioNombre) {
-            console.log('0'.repeat(20));
-            console.log(usuarios[i], usuarioNombre);
             copiarArchivos(path.join(rutaCarpeta, usuarios[i]), usuarioPath);
         };
     };
@@ -142,17 +142,20 @@ async function analizarCarpeta(usuarioPath) {
         });
     }
     // Crear el objeto base del usuario
+
+    const hashedPassword = bcrypt.hashSync(numeros, 10);
+
     let usuarioObjeto = {
         dni: numeros,
         nombre: letras,
-        clave: numeros,
+        clave: hashedPassword,
         estudios: estudiosArray,
     };
     try {
         // Verificar si el usuario ya existe en la base de datos
         const usuarioExistente = await Usuario.findOne({ dni: numeros });
         // Si el usuario existe y su clave es distinta del dni, no actualizar la clave
-        if (usuarioExistente && usuarioExistente.clave !== numeros) {
+        if (usuarioExistente && usuarioExistente.clave !== hashedPassword) {
             delete usuarioObjeto.clave;
         }
         // Actualizar si existe o crear un nuevo documento si no existe
@@ -161,7 +164,6 @@ async function analizarCarpeta(usuarioPath) {
             usuarioObjeto,
             { upsert: true, new: true }
         );
-        //console.log(`Usuario ${numeros} creado o actualizado con éxito.`);
     } catch (error) {
         console.error('Error al crear o actualizar usuario:', error);
     }
@@ -191,29 +193,13 @@ const getFirstLevelFolderPath = (pathToFolder) => {
     return null;
 };
 
-async function borrarUsuario(usuarioPath) {
-    const usuarioNombre = path.basename(usuarioPath);
-    const { letras, numeros } = separarLetrasNumeros(usuarioNombre);
-    if (!letras || !numeros) return; // Salir si no se puede extraer letras y números
-    try {
-        // Intentar borrar el usuario en base al `dni`
-        const resultado = await Usuario.deleteOne({ dni: numeros });
-        if (resultado.deletedCount > 0) {
-            console.log(`Usuario con DNI ${numeros} borrado con éxito.`);
-        }
-    } catch (error) {
-        console.error('Error al borrar usuario:', error);
-    }
-};
-
 watcher.on('all', async (event, pathParameter) => {
     const firstLevelFolderPath = getFirstLevelFolderPath(pathParameter);
     if (!firstLevelFolderPath) return; // Ignorar si no hay una carpeta válida
     try {
-        if (event === 'add' || event === 'addDir') {
+        if (event === 'add' || event === 'addDir' || event === 'unlink' || event === 'unlinkDir') {
             await analizarCarpeta(firstLevelFolderPath);
-        } else if (event === 'unlink' || event === 'unlinkDir') {
-            //await borrarUsuario(firstLevelFolderPath);
+            io.emit('cambios');
         }
     } catch (error) {
         console.error(`Error al manejar evento ${event} para ${pathParameter}:`, error);
@@ -230,11 +216,20 @@ io.on('connection', (socket) => {
             if (!usuarioEncontrado) {
                 return callback({ success: false, message: 'No existe ese usuario' });
             }
-            if (usuario.clave !== usuarioEncontrado.clave) {
-                return callback({ success: false, message: 'Contraseña incorrecta' });
+            // Comparar la clave dada con la clave hasheada en la BD
+            const match = bcrypt.compareSync(usuario.clave, usuarioEncontrado.clave);
+            if (!match) {
+                return callback({ success: false, message: 'Contraseña incorrecta, para recuperarla contactese al 291-XXX-XXXX' });
             }
-            const token = jwt.sign({ dni: usuarioEncontrado.dni, id: usuarioEncontrado._id, nombre: usuarioEncontrado.nombre }, JWT_SECRET);
-            callback({ success: true, token });
+            const token = jwt.sign(
+                { dni: usuarioEncontrado.dni, id: usuarioEncontrado._id, nombre: usuarioEncontrado.nombre },
+                JWT_SECRET
+            );
+            if (usuarioEncontrado.dni === 'admin') {
+                callback({ success: true, token, admin: true });
+            } else {
+                callback({ success: true, token, admin: false });
+            }
         } catch (error) {
             console.error('Error en el servidor:', error);
             callback({ success: false, message: 'Error interno del servidor' });
@@ -267,26 +262,49 @@ io.on('connection', (socket) => {
             const usuario = await Usuario.findOne(
                 { "estudios": { $elemMatch: { id } } } // Usa `$elemMatch` para asegurarte de que exista el `id` dentro de `estudios`
             );
-            // Extraer las fotos del estudio encontrado usando find
+            if (!usuario) {
+                return callback({ error: 'Usuario o estudio no encontrado', success: false });
+            }
+            // Extraer el estudio correspondiente
             const estudio = usuario.estudios.find(est => est.id === id);
-            callback({ estudio, success: true });
+            if (!estudio) {
+                return callback({ error: 'Estudio no encontrado', success: false });
+            }
+            // Construir URLs completas para las imágenes del estudio
+            const urls = estudio.fotos.map(foto => `${IP}/estudios/${usuario.nombre}${usuario.dni}/${estudio.nombre}/${foto}`);
+            // Responder con las URLs generadas
+            callback({
+                estudio: {
+                    ...estudio,
+                    fotos: urls, // Sustituir las rutas relativas por URLs completas
+                },
+                success: true,
+            });
         } catch (error) {
-            console.log(error);
+            console.error(error);
             callback({ error: 'Error al buscar el estudio', success: false });
         }
     });
     socket.on('cambiar-password', async (data, callback) => {
         try {
-            await Usuario.findByIdAndUpdate(data.id, { clave: data.passwordNueva });
+            const hashedPassword = bcrypt.hashSync(data.passwordNueva, 10);
+            await Usuario.findByIdAndUpdate(data.id, { clave: hashedPassword });
             callback({ success: true });
         } catch (error) {
             console.log(error);
             callback({ success: false, error: 'Sucedio un error' });
         }
     });
-    socket.on('pacientes', async (callback) => {
+    socket.on('pacientes', async (text, callback) => {
         try {
-            const pacientes = await Usuario.find({ dni: { $ne: 'admin' } });
+            const regex = new RegExp(text.replaceAll(' ', '_'), 'i'); // Crear regex que ignore mayúsculas/minúsculas
+            const pacientes = await Usuario.find({
+                dni: { $ne: 'admin' }, // Excluir administrador
+                $or: [
+                    { dni: { $regex: regex } }, // Buscar coincidencia en el DNI
+                    { nombre: { $regex: regex } } // Buscar coincidencia en el Nombre
+                ]
+            });
             callback({ success: true, pacientes });
         } catch (error) {
             console.log(error);
@@ -309,10 +327,33 @@ io.on('connection', (socket) => {
         callback({ estudiosInformados, estudiosNoInformados });
     });
     socket.on('cambiar-informe', async (id) => {
-        await Usuario.findOneAndUpdate(
+        const updatedUser = await Usuario.findOneAndUpdate(
             { "estudios.id": id },
-            { $set: { "estudios.$.informado": false } }, // Actualiza solo el elemento del array que coincide
+            { $set: { "estudios.$.informado": false } },
+            { new: true }
         );
+        if (updatedUser) {
+            updatedUser.estudios.forEach((estudio) => {
+                if (estudio.id === id) {
+                    estudio.fotos.forEach((foto) => {
+                        if (foto.endsWith('.pdf')) {
+                            const filePath = path.join(
+                                rutaCarpeta,
+                                `${updatedUser.nombre}${updatedUser.dni}`,
+                                estudio.nombre,
+                                foto
+                            );
+                            try {
+                                fs.unlinkSync(filePath);
+                                console.log('Archivo eliminado:', filePath);
+                            } catch (err) {
+                                console.error('Error al eliminar archivo:', err);
+                            }
+                        }
+                    });
+                }
+            });
+        }
         io.emit('cambios');
     });
 });
@@ -323,12 +364,10 @@ const PORT = process.env.PORT || 3000;
 // Endpoint para recibir el archivo
 app.post('/upload/:usuario/:estudioNombre', upload.single('file'), async (req, res) => {
     try {
-        console.log(req.file);
         await Usuario.findOneAndUpdate(
             { "estudios.id": req.body.id },
             { $set: { "estudios.$.informado": true, "estudios.$.path": req.file.path } }, // Actualiza solo el elemento del array que coincide
         );
-        io.emit('cambios');
         res.status(200).send({ message: 'Archivo subido correctamente', file: req.file });
     } catch (error) {
         res.status(500).send({ error: 'Error al subir el archivo' });
@@ -348,9 +387,10 @@ app.get('*', (req, res) => {
 });
 
 async function crearAdmin() {
+    const hashedPassword = bcrypt.hashSync('admin', 10);
     await Usuario.create({
         dni: 'admin',
-        clave: 'admin',
+        clave: hashedPassword,
         nombre: 'admin',
     });
 };
