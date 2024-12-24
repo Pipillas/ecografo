@@ -21,9 +21,10 @@ app.use(cors({ origin: '*' }));
 app.use(express.json());
 
 // Define la ruta de la carpeta que deseas observar
-// const rutaCarpeta = 'C:/Users/pipas/OneDrive/estudios';
-const rutaCarpeta = 'C:/Users/Pipas/Desktop/prueba';
-const IP = 'http://192.168.0.26:3000';
+const rutaCarpeta = 'C:/Users/pipas/OneDrive/estudios';
+//const rutaCarpeta = 'C:/Users/Pipas/Desktop/prueba';
+//const IP = 'http://192.168.0.26:3000';
+const IP = 'https://ecoalem489.com';
 
 const watcher = chokidar.watch(rutaCarpeta, {
     persistent: true,
