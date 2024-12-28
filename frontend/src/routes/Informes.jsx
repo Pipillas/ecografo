@@ -58,6 +58,7 @@ const Informes = () => {
         });
     };
 
+    /*
     function formatStudyString(studyString) {
         // Extraemos las partes con substring:
         const initials = studyString.substring(0, 3);      // EEE
@@ -69,6 +70,28 @@ const Informes = () => {
         // const seconds = studyString.substring(15, 17);  // ss (si quisieras usarlo)
 
         // Formateamos a DD/MM/YY (sólo últimos 2 dígitos del año) HH:MM
+        const shortYear = year.slice(-2);
+        return `${initials} ${day}/${month}/${shortYear} ${hour}:${minute}`;
+    }
+    */
+
+    function formatStudyString(studyString) {
+        // Usamos una expresión regular para capturar las iniciales y las partes de la fecha y hora
+        const match = studyString.match(/^([A-Z]+)(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})?$/);
+
+        if (!match) {
+            throw new Error("El formato del string no es válido");
+        }
+
+        // Desglosamos las partes
+        const initials = match[1]; // Parte de las iniciales (puede ser 2 o más letras)
+        const year = match[2];
+        const month = match[3];
+        const day = match[4];
+        const hour = match[5];
+        const minute = match[6];
+
+        // Formateamos la salida a DD/MM/YY HH:MM (podemos incluir segundos si es necesario)
         const shortYear = year.slice(-2);
         return `${initials} ${day}/${month}/${shortYear} ${hour}:${minute}`;
     }
