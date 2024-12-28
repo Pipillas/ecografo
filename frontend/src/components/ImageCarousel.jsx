@@ -3,17 +3,26 @@ import '../styles/imagecarousel.css';
 
 const ImageWithEffects = forwardRef(({ src, filters, zoom, offsetX, offsetY, onMouseDown, onMouseMove, onMouseUp, dragging, isMobile }, ref) => {
   const filterStyle = {
-    filter: `contrast(${filters.Contraste}%) brightness(${filters.Brillo}%) sepia(${filters.Sepia}%) invert(${filters.Invertir}%)`,
-    // Solo aplicamos zoom y transformaciones si no es móvil
+    filter: `contrast(${filters.Contraste}%) brightness(${filters.Brillo}%)`,
     ...(isMobile ? {} : {
       transformOrigin: zoom.origin,
       transform: `scale(${zoom.scale}) translate(${offsetX}px, ${offsetY}px)`,
       cursor: zoom.scale > 1 ? 'grabbing' : 'zoom-in',
-    })
+    }),
   };
 
-  if (src && typeof src === 'string' && src.endsWith('.pdf')) {
-    return <embed width={'100%'} height={'100%'} src={`${src}#toolbar=0&navpanes=0&scrollbar=0`} type="application/pdf"></embed>;
+  if (src && typeof src === 'string' && src.toLowerCase().endsWith('.pdf')) {
+    if (isMobile) {
+      return (
+        <div className="mobile-pdf-container">
+          <a href={src} download className="mobile-pdf-download">
+            Descargar PDF
+          </a>
+        </div>
+      );
+    }
+
+    return <iframe width="100%" height="100%" src={`${src}#navpanes=0&scrollbar=0`} type="application/pdf" />;
   }
 
   return (
@@ -43,34 +52,24 @@ const QuickAction = ({ icon, label, onClick, active, className }) => (
 );
 
 const FilterImage = ({ images }) => {
-  // Estados principales
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [filters, setFilters] = useState({
     Contraste: 100,
     Brillo: 100,
-    Sepia: 0,
-    Invertir: 0,
   });
   const [showFilters, setShowFilters] = useState(true);
   const [showThumbnails, setShowThumbnails] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
-
-  // Estado para detectar móvil
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-
-  // Estados para zoom y movimiento (solo desktop)
   const [zoom, setZoom] = useState({ scale: 1, originX: 0, originY: 0 });
   const [offsetX, setOffsetX] = useState(0);
   const [offsetY, setOffsetY] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [startY, setStartY] = useState(0);
-
-  // Estados para swipe en móvil
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
 
-  // Referencias
   const imageRef = useRef(null);
   const containerRef = useRef(null);
 
@@ -78,17 +77,13 @@ const FilterImage = ({ images }) => {
     const handleResize = () => {
       setIsMobile(window.innerWidth <= 768);
     };
-
-    // Establecer foco en el contenedor al montar
     if (containerRef.current) {
       containerRef.current.focus();
     }
-
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Manejo de swipe para móvil
   const minSwipeDistance = 50;
 
   const onTouchStart = (e) => {
@@ -109,17 +104,17 @@ const FilterImage = ({ images }) => {
 
     if (isLeftSwipe) {
       if (currentImageIndex < images.length - 1) {
-        navigateImages(1); // Ir a la siguiente imagen
+        navigateImages(1);
       } else {
-        navigateImages(0 - (images.length - 1)); // Ir a la primera imagen (circular)
+        navigateImages(0 - (images.length - 1));
       }
     }
 
     if (isRightSwipe) {
       if (currentImageIndex > 0) {
-        navigateImages(-1); // Ir a la imagen anterior
+        navigateImages(-1);
       } else {
-        navigateImages(images.length - 1); // Ir a la última imagen (circular)
+        navigateImages(images.length - 1);
       }
     }
   };
@@ -140,7 +135,7 @@ const FilterImage = ({ images }) => {
   const handleFilterChange = (filterName, value) => {
     setFilters(prev => ({
       ...prev,
-      [filterName]: parseInt(value)
+      [filterName]: parseInt(value),
     }));
   };
 
@@ -160,7 +155,7 @@ const FilterImage = ({ images }) => {
       setZoom({
         scale: 1,
         originX: 0,
-        originY: 0
+        originY: 0,
       });
       return;
     }
@@ -172,11 +167,10 @@ const FilterImage = ({ images }) => {
     setZoom({
       scale: newScale,
       originX: ((mouseX / boundingRect.width) * 100).toFixed(2),
-      originY: ((mouseY / boundingRect.height) * 100).toFixed(2)
+      originY: ((mouseY / boundingRect.height) * 100).toFixed(2),
     });
   };
 
-  // Solo para desktop
   const handleMouseDown = (event) => {
     if (isMobile || zoom.scale === 1) return;
     event.preventDefault();
@@ -206,8 +200,6 @@ const FilterImage = ({ images }) => {
     setFilters({
       Contraste: 100,
       Brillo: 100,
-      Sepia: 0,
-      Invertir: 0,
     });
     setZoom({ scale: 1, originX: 0, originY: 0 });
     setOffsetX(0);
@@ -229,21 +221,18 @@ const FilterImage = ({ images }) => {
   const navigateImages = (direction) => {
     const totalImages = images.length;
 
-    // Si estamos en la última imagen y avanzamos, ir a la primera
     if (currentImageIndex === totalImages - 1 && direction === 1) {
       setCurrentImageIndex(0);
       resetImage();
       return;
     }
 
-    // Si estamos en la primera imagen y retrocedemos, ir a la última
     if (currentImageIndex === 0 && direction === -1) {
       setCurrentImageIndex(totalImages - 1);
       resetImage();
       return;
     }
 
-    // Cambiar la imagen normalmente
     const newIndex = currentImageIndex + direction;
     if (newIndex >= 0 && newIndex < totalImages) {
       setCurrentImageIndex(newIndex);
@@ -326,9 +315,9 @@ const FilterImage = ({ images }) => {
                   type="range"
                   id={`${filterName}Slider`}
                   className="filter-slider"
-                  min={(filterName === 'Sepia') || (filterName === 'Invertir') ? '0' : '50'}
-                  max={filterName === 'Invertir' ? "100" : "200"}
-                  step={filterName === 'Invertir' ? "100" : "1"}
+                  min="50"
+                  max="200"
+                  step="1"
                   value={value}
                   onChange={(e) => handleFilterChange(filterName, e.target.value)}
                 />
@@ -376,8 +365,7 @@ const FilterImage = ({ images }) => {
         <div className="thumbnails-panel">
           <div className="thumbnails-scroll">
             {images.map((image, index) => {
-              // Verificar si es un PDF
-              if (typeof image === 'string' && image.endsWith('.pdf')) {
+              if (typeof image === 'string' && image.toLowerCase().endsWith('.pdf')) {
                 return (
                   <div
                     key={index}
@@ -385,9 +373,8 @@ const FilterImage = ({ images }) => {
                     onClick={() => setCurrentImageIndex(index)}
                     title={`PDF ${index + 1}`}
                   >
-                    {/* Contenedor para garantizar el clic */}
                     <div className="thumbnail-overlay" />
-                    <embed
+                    <iframe
                       src={`${image}#toolbar=0&navpanes=0&scrollbar=0`}
                       type="application/pdf"
                       width="100"
@@ -412,24 +399,6 @@ const FilterImage = ({ images }) => {
           </div>
         </div>
       )}
-      {/* {showThumbnails && (
-        <div className="thumbnails-panel">
-          <div className="thumbnails-scroll">
-            {images.map((image, index) => (
-              <div
-                key={index}
-                className={`thumbnail ${currentImageIndex === index ? 'active' : ''}`}
-                onClick={() => setCurrentImageIndex(index)}
-                title={`Imagen ${index + 1}`}
-              >
-                <img src={image} alt={`Thumbnail ${index + 1}`} />
-                <div className="thumbnail-number">{index + 1}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )} */}
-
     </div>
   );
 };

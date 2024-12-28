@@ -45,7 +45,7 @@ const storage = multer.diskStorage({
         cb(null, uploadPath);
     },
     filename: (req, file, cb) => {
-        const filename = `${Date.now()}.pdf`;
+        const filename = `informe.pdf`;
         cb(null, filename);
     }
 });

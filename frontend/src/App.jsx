@@ -13,9 +13,10 @@ function App() {
       <Routes>
         {/* Rutas públicas */}
         <Route path="/login" element={<Login />} />
+        <Route path="/estudio/:id" element={<Estudio />} /> {/* Cambiado a público */}
         {/* Rutas protegidas para todos los usuarios */}
         <Route path="/estudios" element={<ProtectedRoute element={Estudios} />} />
-        <Route path="/estudio/:id" element={<ProtectedRoute element={Estudio} />} />
+        {/* <Route path="/estudio/:id" element={<ProtectedRoute element={Estudio} />} /> */}
         {/* Rutas protegidas exclusivas para administradores */}
         <Route path="/pacientes" element={<ProtectedRoute element={Patients} adminOnly={true} />} />
         <Route path="/informes" element={<ProtectedRoute element={Informes} adminOnly={true} />} />

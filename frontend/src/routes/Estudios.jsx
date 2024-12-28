@@ -19,6 +19,26 @@ function Estudios({ usuario }) {
         return null;
     }
 
+    function compartirEnlace(estudioId) {
+        const url = `www.ecoalem489.com/estudio/${estudioId}`;
+        const text = `Visita este enlace: ${url}`;
+
+        if (navigator.share) {
+            navigator.share({
+                title: 'Compartir Estudio',
+                text: text,
+                url: url,
+            })
+                .then(() => console.log('Compartido exitosamente'))
+                .catch((error) => console.error('Error al compartir:', error));
+        } else {
+            // Fallback para navegadores que no soportan la API Web Share
+            const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+            window.open(waUrl, '_blank');
+        }
+    }
+
+
     useEffect(() => {
         socket.emit('estudios', usuario.id, (response) => {
             setEstudios(response.usuario.estudios);
@@ -30,7 +50,7 @@ function Estudios({ usuario }) {
             <nav className="nav-container">
                 <div className="nav-user">
                     <i className="fas fa-user"></i>
-                    <span className="user-name">{usuario.nombre?.replace(/_/g, ' ')}</span>
+                    <span className="user-name">{usuario.nombre?.replace(/_/g, ' ').toUpperCase()}</span>
                 </div>
                 <div className="nav-actions">
                     <a
@@ -86,11 +106,12 @@ function Estudios({ usuario }) {
                                             >
                                                 Ver
                                             </button>
-                                            {/* <button
-                                                onClick={() => fetch(`${IP}/descargar/${estudio.id}`)}
-                                                className="btn-secondary">
-                                                <i className="fa-solid fa-download"></i>
-                                            </button> */}
+                                            <button
+                                                onClick={() => compartirEnlace(estudio.id)}
+                                                className="btn-primary"
+                                            >
+                                                Compartir
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>

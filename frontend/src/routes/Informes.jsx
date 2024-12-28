@@ -182,7 +182,7 @@ const Informes = () => {
                                             >
                                                 {/* DNI y nombre del paciente (reemplazando '_' por espacio) */}
                                                 <td>{study.dni}</td>
-                                                <td className="nombre">{study.nombrePaciente.replaceAll('_', ' ')}</td>
+                                                <td className="nombre">{study.nombrePaciente.replaceAll('_', ' ').toUpperCase()}</td>
                                                 {/* Formateamos el nombre del estudio (EEE + dd/mm/yy HH:mm) */}
                                                 <td>{formatStudyString(study.nombreEstudio)}</td>
                                                 {/* Botón de subir archivo (evitamos que el click abra el estudio) */}
@@ -231,7 +231,7 @@ const Informes = () => {
                                             return patient.estudios.map((est) => (
                                                 <tr onClick={() => window.open(`/estudio/${est.id}`)} key={est.id}>
                                                     <td>{patient.dni}</td>
-                                                    <td className="nombre">{patient.nombre.replaceAll('_', ' ')}</td>
+                                                    <td className="nombre">{patient.nombre.replaceAll('_', ' ').toUpperCase()}</td>
                                                     <td>{formatStudyString(est.nombre)}</td>
                                                     <td onClick={(e) => e.stopPropagation()}>
                                                         <button

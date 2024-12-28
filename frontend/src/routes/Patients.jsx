@@ -93,7 +93,7 @@ const Patients = () => {
                                     {patients.map((patient) => (
                                         <tr key={patient.dni}>
                                             <td>{patient.dni}</td>
-                                            <td>{patient.nombre.replaceAll('_', ' ')}</td>
+                                            <td>{patient.nombre.replaceAll('_', ' ').toUpperCase()}</td>
                                             <td>
                                                 <button
                                                     onClick={() => {
