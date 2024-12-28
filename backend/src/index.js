@@ -306,7 +306,7 @@ io.on('connection', (socket) => {
                     { dni: { $regex: regex } }, // Buscar coincidencia en el DNI
                     { nombre: { $regex: regex } } // Buscar coincidencia en el Nombre
                 ]
-            });
+            }).sort({ createdAt: -1 });
             callback({ success: true, pacientes });
         } catch (error) {
             console.log(error);
@@ -314,18 +314,17 @@ io.on('connection', (socket) => {
         }
     });
     socket.on('informes', async (callback) => {
-        const usuariosInformados = await Usuario.find({ "estudios.informado": true });
+        const usuariosInformados = await Usuario.find({ "estudios.informado": true }).sort({ createdAt: -1 });
         const estudiosInformados = usuariosInformados.map(usuario => ({
             ...usuario.toObject(), // Convierte el documento de Mongoose a un objeto plano
             estudios: usuario.estudios.filter(estudio => estudio.informado === true),
         }));
 
-        const usuariosNoInformados = await Usuario.find({ "estudios.informado": false });
+        const usuariosNoInformados = await Usuario.find({ "estudios.informado": false }).sort({ createdAt: -1 });
         const estudiosNoInformados = usuariosNoInformados.map(usuario => ({
             ...usuario.toObject(), // Convierte el documento de Mongoose a un objeto plano
             estudios: usuario.estudios.filter(estudio => estudio.informado === false),
         }));
-
         callback({ estudiosInformados, estudiosNoInformados });
     });
     socket.on('cambiar-informe', async (id) => {
