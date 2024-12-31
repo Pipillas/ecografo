@@ -18,7 +18,7 @@ const Patients = () => {
         window.location.reload();
     };
 
-    const buscarPacientes = (text, page = 1) => {
+    const buscarPacientes = (text = '', page = 1) => {
         socket.emit('pacientes', { text, page, limit: patientsPerPage }, (response) => {
             if (response.success) {
                 setPatients(response.pacientes);
@@ -31,12 +31,17 @@ const Patients = () => {
     };
 
     useEffect(() => {
+        if (page > totalPages) {
+            setPage(1);
+        }
+    }, [totalPages]);
+
+    useEffect(() => {
         buscarPacientes(searchTerm, currentPage);
-    }, [searchTerm, currentPage]);
+    }, [currentPage, searchTerm]);
 
     const handlePageChange = (page) => {
         setCurrentPage(page);
-        buscarPacientes(searchTerm, page);
     };
 
     return (

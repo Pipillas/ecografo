@@ -370,7 +370,6 @@ io.on('connection', (socket) => {
         }
     });
 
-
     socket.on('cambiar-informe', async (id) => {
         const updatedUser = await Usuario.findOneAndUpdate(
             { "estudios.id": id },

@@ -71,7 +71,6 @@ const Informes = () => {
 
     const handlePageChange = (page) => {
         setCurrentPage(page);
-        fetchData(page);
     };
 
     function formatStudyString(studyString) {
@@ -132,12 +131,12 @@ const Informes = () => {
             setUploadingStudyId(null);
         });
 
-        fetchData();
+        fetchData(currentPage);
 
         return () => {
             socket.off('cambios');
         };
-    }, []);
+    }, [currentPage]);
 
     return (
         <div className="content-wrapper">
