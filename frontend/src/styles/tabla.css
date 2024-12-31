@@ -184,6 +184,37 @@
     transform: translateY(-2px);
 }
 
+.pagination {
+    display: flex;
+    justify-content: center;
+    margin: 1rem 0;
+    gap: 0.5rem;
+}
+
+.pagination-button {
+    padding: 0.5rem 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.pagination-button:hover {
+    background: #e2e8f0;
+    color: #334155;
+}
+
+.pagination-button.active {
+    background: #f97316;
+    color: white;
+    border-color: #f97316;
+}
+
+
+
 /* Media queries mantienen la misma estructura pero con ajustes en el diseño */
 @media (max-width: 1024px) {
     .table-container {

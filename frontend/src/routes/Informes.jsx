@@ -7,6 +7,9 @@ const Informes = () => {
     const [uploadingStudyId, setUploadingStudyId] = useState(null);
     const [estudiosInformados, setEstudiosInformados] = useState([]);
     const [estudiosNoInformados, setEstudiosNoInformados] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1); // Página actual
+    const studiesPerPage = 20; // Configuración de estudios por página
+
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -16,18 +19,17 @@ const Informes = () => {
     };
 
     const handleFileChange = (e, patient, estNombre, estId) => {
-        const fileInput = e.target;           // Guardamos la referencia al input
-        const file = fileInput.files[0];      // Tomamos el archivo seleccionado
+        const fileInput = e.target;
+        const file = fileInput.files[0];
 
-        if (!file) return;                    // Si no hay archivo (el usuario canceló)
+        if (!file) return;
 
         if (file.type !== 'application/pdf') {
             alert('Solo se permiten archivos PDF');
-            fileInput.value = null; // Limpia el valor para permitir una nueva subida
+            fileInput.value = null;
             return;
         }
 
-        // Marcar que estamos subiendo este estudio
         setUploadingStudyId(estId);
 
         const formData = new FormData();
@@ -38,18 +40,17 @@ const Informes = () => {
             method: 'POST',
             body: formData,
         })
-            .then(response => response.json())
-            .then(data => {
+            .then((response) => response.json())
+            .then((data) => {
                 console.log('Archivo subido con éxito:', data);
             })
-            .catch(error => {
+            .catch((error) => {
                 alert(`Error al subir el archivo: ${error}`);
-                setUploadingStudyId(null);    // Asegurar volver a estado normal
-                fileInput.value = null;       // Limpiar el input aunque haya error
+                setUploadingStudyId(null);
+                fileInput.value = null;
                 console.log('Error al subir el archivo:', error);
             });
     };
-
 
     const fetchData = () => {
         socket.emit('informes', (response) => {
@@ -58,53 +59,31 @@ const Informes = () => {
         });
     };
 
-    /*
     function formatStudyString(studyString) {
-        // Extraemos las partes con substring:
-        const initials = studyString.substring(0, 3);      // EEE
-        const year = studyString.substring(3, 7);          // YYYY
-        const month = studyString.substring(7, 9);         // MM
-        const day = studyString.substring(9, 11);          // DD
-        const hour = studyString.substring(11, 13);        // HH
-        const minute = studyString.substring(13, 15);      // mm
-        // const seconds = studyString.substring(15, 17);  // ss (si quisieras usarlo)
-
-        // Formateamos a DD/MM/YY (sólo últimos 2 dígitos del año) HH:MM
-        const shortYear = year.slice(-2);
-        return `${initials} ${day}/${month}/${shortYear} ${hour}:${minute}`;
-    }
-    */
-
-    function formatStudyString(studyString) {
-        // Usamos una expresión regular para capturar las iniciales y las partes de la fecha y hora
         const match = studyString.match(/^([A-Z]+)(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})?$/);
 
         if (!match) {
-            throw new Error("El formato del string no es válido");
+            throw new Error('El formato del string no es válido');
         }
 
-        // Desglosamos las partes
-        const initials = match[1]; // Parte de las iniciales (puede ser 2 o más letras)
+        const initials = match[1];
         const year = match[2];
         const month = match[3];
         const day = match[4];
         const hour = match[5];
         const minute = match[6];
 
-        // Formateamos la salida a DD/MM/YY HH:MM (podemos incluir segundos si es necesario)
         const shortYear = year.slice(-2);
         return `${initials} ${day}/${month}/${shortYear} ${hour}:${minute}`;
     }
 
     function extractDateFromStudyName(studyName) {
-        // Asumiendo formato "EEEYYYYMMDDHHmm"
-        const year = studyName.substring(3, 7);   // "2023"
-        const month = studyName.substring(7, 9);  // "10"
-        const day = studyName.substring(9, 11);   // "09"
-        const hour = studyName.substring(11, 13); // "10"
-        const minute = studyName.substring(13, 15); // "30"
+        const year = studyName.substring(3, 7);
+        const month = studyName.substring(7, 9);
+        const day = studyName.substring(9, 11);
+        const hour = studyName.substring(11, 13);
+        const minute = studyName.substring(13, 15);
 
-        // Devolvemos un string "YYYYMMDDHHmm"
         return `${year}${month}${day}${hour}${minute}`;
     }
 
@@ -112,7 +91,6 @@ const Informes = () => {
         const dateA = extractDateFromStudyName(a.nombreEstudio);
         const dateB = extractDateFromStudyName(b.nombreEstudio);
 
-        // Si querés lo más viejo primero:
         return dateA.localeCompare(dateB);
     });
 
@@ -121,12 +99,11 @@ const Informes = () => {
 
         estudiosNoInformados.forEach((patient) => {
             patient.estudios.forEach((est) => {
-                // Anexamos la info del paciente dentro del propio "estudio"
                 allStudies.push({
                     id: est.id,
-                    nombreEstudio: est.nombre,        // "EEE202311081430"
+                    nombreEstudio: est.nombre,
                     dni: patient.dni,
-                    nombrePaciente: patient.nombre,   // "Juan_Perez"
+                    nombrePaciente: patient.nombre,
                 });
             });
         });
@@ -137,7 +114,7 @@ const Informes = () => {
     useEffect(() => {
         socket.on('cambios', () => {
             fetchData();
-            setUploadingStudyId(null); // Vuelve a estado normal
+            setUploadingStudyId(null);
         });
 
         fetchData();
@@ -146,6 +123,12 @@ const Informes = () => {
             socket.off('cambios');
         };
     }, []);
+
+    const indexOfLastStudy = currentPage * studiesPerPage;
+    const indexOfFirstStudy = indexOfLastStudy - studiesPerPage;
+    const currentStudies = estudiosInformados.slice(indexOfFirstStudy, indexOfLastStudy);
+
+    const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
     return (
         <div className="content-wrapper">
@@ -203,12 +186,9 @@ const Informes = () => {
                                                 key={study.id}
                                                 onClick={() => window.open(`/estudio/${study.id}`)}
                                             >
-                                                {/* DNI y nombre del paciente (reemplazando '_' por espacio) */}
                                                 <td>{study.dni}</td>
                                                 <td className="nombre">{study.nombrePaciente.replaceAll('_', ' ').toUpperCase()}</td>
-                                                {/* Formateamos el nombre del estudio (EEE + dd/mm/yy HH:mm) */}
                                                 <td>{formatStudyString(study.nombreEstudio)}</td>
-                                                {/* Botón de subir archivo (evitamos que el click abra el estudio) */}
                                                 <td onClick={(e) => e.stopPropagation()}>
                                                     <label className="action-button custom-file-upload">
                                                         <input
@@ -216,17 +196,16 @@ const Informes = () => {
                                                             accept=".pdf"
                                                             onChange={(e) => handleFileChange(
                                                                 e,
-                                                                // simulamos "patient" con los datos mínimos
                                                                 { nombre: study.nombrePaciente, dni: study.dni },
                                                                 study.nombreEstudio,
                                                                 study.id
                                                             )}
                                                         />
-                                                        {
-                                                            uploadingStudyId === study.id
-                                                                ? <i className="fas fa-spinner fa-spin"></i>
-                                                                : 'Subir'
-                                                        }
+                                                        {uploadingStudyId === study.id ? (
+                                                            <i className="fas fa-spinner fa-spin"></i>
+                                                        ) : (
+                                                            'Subir'
+                                                        )}
                                                     </label>
                                                 </td>
                                             </tr>
@@ -250,17 +229,25 @@ const Informes = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {estudiosInformados.map((patient) => {
-                                            return patient.estudios.map((est) => (
-                                                <tr onClick={() => window.open(`/estudio/${est.id}`)} key={est.id}>
+                                        {currentStudies.map((patient) =>
+                                            patient.estudios.map((est) => (
+                                                <tr
+                                                    onClick={() => window.open(`/estudio/${est.id}`)}
+                                                    key={est.id}
+                                                >
                                                     <td>{patient.dni}</td>
                                                     <td className="nombre">{patient.nombre.replaceAll('_', ' ').toUpperCase()}</td>
                                                     <td>{formatStudyString(est.nombre)}</td>
                                                     <td onClick={(e) => e.stopPropagation()}>
                                                         <button
                                                             onClick={() => {
-                                                                if (window.confirm(`Esta seguro que desea borrar el informe de ${patient.nombre}?\n¡Esta acción es irreversible!`)) {
-                                                                    socket.emit('cambiar-informe', est.id)
+                                                                if (
+                                                                    window.confirm(
+                                                                        `¿Está seguro que desea borrar el informe de ${patient.nombre}?
+¡Esta acción es irreversible!`
+                                                                    )
+                                                                ) {
+                                                                    socket.emit('cambiar-informe', est.id);
                                                                 }
                                                             }}
                                                             className="action-button cancel-action"
@@ -269,10 +256,23 @@ const Informes = () => {
                                                         </button>
                                                     </td>
                                                 </tr>
-                                            ));
-                                        })}
+                                            ))
+                                        )}
                                     </tbody>
                                 </table>
+                            </div>
+                            <div className="pagination">
+                                {Array.from({
+                                    length: Math.ceil(estudiosInformados.length / studiesPerPage),
+                                }).map((_, i) => (
+                                    <button
+                                        key={i + 1}
+                                        className={`pagination-button ${currentPage === i + 1 ? 'active' : ''}`}
+                                        onClick={() => paginate(i + 1)}
+                                    >
+                                        {i + 1}
+                                    </button>
+                                ))}
                             </div>
                         </div>
                     </div>

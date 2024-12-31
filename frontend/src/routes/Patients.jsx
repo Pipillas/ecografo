@@ -6,6 +6,9 @@ import { socket } from '../main';
 const Patients = () => {
     const [patients, setPatients] = useState([]);
     const [searchTerm, setSearchTerm] = useState(''); // Estado para el término de búsqueda
+    const [currentPage, setCurrentPage] = useState(1); // Página actual para paginación
+    const patientsPerPage = 10; // Número de pacientes por página
+
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -19,6 +22,7 @@ const Patients = () => {
         socket.emit('pacientes', text, (response) => {
             if (response.success) {
                 setPatients(response.pacientes);
+                setCurrentPage(1); // Reinicia a la primera página en cada búsqueda
             } else {
                 console.log(response.error);
             }
@@ -29,6 +33,13 @@ const Patients = () => {
     useEffect(() => {
         buscarPacientes(searchTerm); // Cargar todos los pacientes inicialmente
     }, [searchTerm]);
+
+    // Lógica para la paginación
+    const indexOfLastPatient = currentPage * patientsPerPage;
+    const indexOfFirstPatient = indexOfLastPatient - patientsPerPage;
+    const currentPatients = patients.slice(indexOfFirstPatient, indexOfLastPatient);
+
+    const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
     return (
         <div className="content-wrapper">
@@ -90,23 +101,27 @@ const Patients = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {patients.map((patient) => (
+                                    {currentPatients.map((patient) => (
                                         <tr key={patient.dni}>
                                             <td>{patient.dni}</td>
                                             <td>{patient.nombre.replaceAll('_', ' ').toUpperCase()}</td>
                                             <td>
                                                 <button
                                                     onClick={() => {
-                                                        if (window.confirm(`Esta seguro que desea cambiar la contraseña de ${patient.nombre}?`)) {
-                                                            socket.emit('cambiar-password', {
-                                                                id: patient._id,
-                                                                passwordNueva: patient.dni
-                                                            }, (response) => {
-                                                                if (response.error) {
-                                                                    console.log(response.error);
-                                                                    return;
+                                                        if (window.confirm(`¿Está seguro que desea cambiar la contraseña de ${patient.nombre}?`)) {
+                                                            socket.emit(
+                                                                'cambiar-password',
+                                                                {
+                                                                    id: patient._id,
+                                                                    passwordNueva: patient.dni,
+                                                                },
+                                                                (response) => {
+                                                                    if (response.error) {
+                                                                        console.log(response.error);
+                                                                        return;
+                                                                    }
                                                                 }
-                                                            });
+                                                            );
                                                         }
                                                     }}
                                                     className="action-button cancel-action"
@@ -119,9 +134,28 @@ const Patients = () => {
                                 </tbody>
                             </table>
                             {patients.length === 0 && (
-                                <p style={{ marginTop: '10px' }}>No se encontraron pacientes para el criterio de búsqueda.</p>
+                                <p style={{ marginTop: '10px' }}>
+                                    No se encontraron pacientes para el criterio de búsqueda.
+                                </p>
                             )}
                         </div>
+                        {/* Los estilos de la paginacion estan en el css de tabla.css */}
+                        {/* Paginación */}
+                        {patients.length > patientsPerPage && (
+                            <div className="pagination">
+                                {Array.from({
+                                    length: Math.ceil(patients.length / patientsPerPage),
+                                }).map((_, i) => (
+                                    <button
+                                        key={i + 1}
+                                        className={`pagination-button ${currentPage === i + 1 ? 'active' : ''}`}
+                                        onClick={() => paginate(i + 1)}
+                                    >
+                                        {i + 1}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
