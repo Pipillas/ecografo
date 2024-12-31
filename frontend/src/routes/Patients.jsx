@@ -23,7 +23,6 @@ const Patients = () => {
             if (response.success) {
                 setPatients(response.pacientes);
                 setTotalPages(Math.ceil(response.totalPatients / patientsPerPage));
-                setCurrentPage(page);
             } else {
                 console.error(response.error);
             }
@@ -31,8 +30,8 @@ const Patients = () => {
     };
 
     useEffect(() => {
-        if (page > totalPages) {
-            setPage(1);
+        if (currentPage > totalPages) {
+            setCurrentPage(1);
         }
     }, [totalPages]);
 
