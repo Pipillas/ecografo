@@ -8,6 +8,7 @@ const Informes = () => {
     const [estudiosInformados, setEstudiosInformados] = useState([]);
     const [estudiosNoInformados, setEstudiosNoInformados] = useState([]);
     const [currentPage, setCurrentPage] = useState(1); // Página actual
+    const [totalPages, setTotalPages] = useState(1); // Total de páginas
     const studiesPerPage = 20; // Configuración de estudios por página
 
     const navigate = useNavigate();
@@ -52,11 +53,25 @@ const Informes = () => {
             });
     };
 
-    const fetchData = () => {
-        socket.emit('informes', (response) => {
-            setEstudiosInformados(response.estudiosInformados);
-            setEstudiosNoInformados(response.estudiosNoInformados);
-        });
+    const fetchData = (page = 1) => {
+        socket.emit(
+            'informes',
+            { page, limit: studiesPerPage }, // Parámetros de paginación
+            (response) => {
+                if (response.success) {
+                    setEstudiosInformados(response.estudiosInformados);
+                    setEstudiosNoInformados(response.estudiosNoInformados);
+                    setTotalPages(Math.ceil((response.totalInformados + response.totalNoInformados) / studiesPerPage));
+                } else {
+                    console.error('Error al obtener informes:', response.error);
+                }
+            }
+        );
+    };
+
+    const handlePageChange = (page) => {
+        setCurrentPage(page);
+        fetchData(page);
     };
 
     function formatStudyString(studyString) {
@@ -113,7 +128,7 @@ const Informes = () => {
 
     useEffect(() => {
         socket.on('cambios', () => {
-            fetchData();
+            fetchData(currentPage);
             setUploadingStudyId(null);
         });
 
@@ -123,12 +138,6 @@ const Informes = () => {
             socket.off('cambios');
         };
     }, []);
-
-    const indexOfLastStudy = currentPage * studiesPerPage;
-    const indexOfFirstStudy = indexOfLastStudy - studiesPerPage;
-    const currentStudies = estudiosInformados.slice(indexOfFirstStudy, indexOfLastStudy);
-
-    const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
     return (
         <div className="content-wrapper">
@@ -229,7 +238,7 @@ const Informes = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {currentStudies.map((patient) =>
+                                        {estudiosInformados.map((patient) =>
                                             patient.estudios.map((est) => (
                                                 <tr
                                                     onClick={() => window.open(`/estudio/${est.id}`)}
@@ -262,13 +271,11 @@ const Informes = () => {
                                 </table>
                             </div>
                             <div className="pagination">
-                                {Array.from({
-                                    length: Math.ceil(estudiosInformados.length / studiesPerPage),
-                                }).map((_, i) => (
+                                {Array.from({ length: totalPages }, (_, i) => (
                                     <button
                                         key={i + 1}
                                         className={`pagination-button ${currentPage === i + 1 ? 'active' : ''}`}
-                                        onClick={() => paginate(i + 1)}
+                                        onClick={() => handlePageChange(i + 1)}
                                     >
                                         {i + 1}
                                     </button>

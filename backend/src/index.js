@@ -297,36 +297,80 @@ io.on('connection', (socket) => {
             callback({ success: false, error: 'Sucedio un error' });
         }
     });
-    socket.on('pacientes', async (text, callback) => {
+    socket.on('pacientes', async ({ text = '', page = 1, limit = 10 }, callback) => {
         try {
             const regex = new RegExp(text.replaceAll(' ', '_'), 'i'); // Crear regex que ignore mayúsculas/minúsculas
-            const pacientes = await Usuario.find({
+            const skip = (page - 1) * limit;
+
+            // Filtrar pacientes según el término de búsqueda
+            const query = {
                 dni: { $ne: 'admin' }, // Excluir administrador
                 $or: [
                     { dni: { $regex: regex } }, // Buscar coincidencia en el DNI
                     { nombre: { $regex: regex } } // Buscar coincidencia en el Nombre
-                ]
-            }).sort({ createdAt: -1 });
-            callback({ success: true, pacientes });
+                ],
+            };
+
+            // Obtener pacientes paginados
+            const totalPatients = await Usuario.countDocuments(query);
+            const pacientes = await Usuario.find(query)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit);
+
+            callback({
+                success: true,
+                pacientes,
+                totalPatients,
+            });
         } catch (error) {
             console.log(error);
-            callback({ success: false, error: 'Sucedio un error' });
+            callback({ success: false, error: 'Error al obtener pacientes' });
         }
     });
-    socket.on('informes', async (callback) => {
-        const usuariosInformados = await Usuario.find({ "estudios.informado": true }).sort({ createdAt: -1 });
-        const estudiosInformados = usuariosInformados.map(usuario => ({
-            ...usuario.toObject(), // Convierte el documento de Mongoose a un objeto plano
-            estudios: usuario.estudios.filter(estudio => estudio.informado === true),
-        }));
 
-        const usuariosNoInformados = await Usuario.find({ "estudios.informado": false }).sort({ createdAt: -1 });
-        const estudiosNoInformados = usuariosNoInformados.map(usuario => ({
-            ...usuario.toObject(), // Convierte el documento de Mongoose a un objeto plano
-            estudios: usuario.estudios.filter(estudio => estudio.informado === false),
-        }));
-        callback({ estudiosInformados, estudiosNoInformados });
+    socket.on('informes', async ({ page = 1, limit = 20 }, callback) => {
+        try {
+            const skip = (page - 1) * limit;
+
+            // Total informados
+            const totalInformados = await Usuario.countDocuments({ "estudios.informado": true });
+            const usuariosInformados = await Usuario.find({ "estudios.informado": true })
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit);
+
+            const estudiosInformados = usuariosInformados.map(usuario => ({
+                ...usuario.toObject(),
+                estudios: usuario.estudios.filter(estudio => estudio.informado === true),
+            }));
+
+            // Total no informados
+            const totalNoInformados = await Usuario.countDocuments({ "estudios.informado": false });
+            const usuariosNoInformados = await Usuario.find({ "estudios.informado": false })
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit);
+
+            const estudiosNoInformados = usuariosNoInformados.map(usuario => ({
+                ...usuario.toObject(),
+                estudios: usuario.estudios.filter(estudio => estudio.informado === false),
+            }));
+
+            callback({
+                estudiosInformados,
+                totalInformados,
+                estudiosNoInformados,
+                totalNoInformados,
+                success: true,
+            });
+        } catch (error) {
+            console.error('Error en el backend de informes:', error);
+            callback({ success: false, error: 'Error al obtener informes' });
+        }
     });
+
+
     socket.on('cambiar-informe', async (id) => {
         const updatedUser = await Usuario.findOneAndUpdate(
             { "estudios.id": id },
