@@ -112,11 +112,17 @@ function copiarArchivos(origen, destino) {
 async function analizarCarpeta(usuarioPath) {
     const usuarioNombre = path.basename(usuarioPath);
     const { letras, numeros } = separarLetrasNumeros(usuarioNombre);
-    if (!letras || !numeros) return; // Salir si no se puede extraer letras y números
+    if (!letras || !numeros) {
+        console.log(`Faltan letras o numeros: ${usuarioPath}`);
+        return; // Salir si no se puede extraer letras y números
+    }
     const usuarios = fs.readdirSync(rutaCarpeta);
     for (let i = 0; i < usuarios.length; i++) {
         const data = separarLetrasNumeros(usuarios[i]);
-        if (!data.numeros) return; // Salir si no se puede extraer letras y números
+        if (!data.numeros) {
+            console.log(`Usuario inválido encontrado: ${usuarios[i]}. Continuando.`);
+            continue; // Salir de esta iteración, pero no detener el bucle
+        }
         if (numeros === data.numeros && usuarios[i] !== usuarioNombre) {
             copiarArchivos(path.join(rutaCarpeta, usuarios[i]), usuarioPath);
         };
@@ -169,6 +175,7 @@ async function analizarCarpeta(usuarioPath) {
     } catch (error) {
         console.error('Error al crear o actualizar usuario:', error);
     }
+    console.error(`Carpeta analizada correctamente ${usuarioPath}`);
 };
 
 // Función para analizar todas las carpetas de estudios inicialmente
@@ -177,7 +184,6 @@ async function analizarTodasLasCarpetas() {
     // Procesar cada carpeta de usuario en el directorio 'estudios'
     for (const usuario of usuarios) {
         const usuarioPath = path.join(rutaCarpeta, usuario);
-        console.log(usuarioPath);
         await analizarCarpeta(usuarioPath);
     }
 }
