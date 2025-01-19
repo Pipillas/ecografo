@@ -335,13 +335,24 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('informes', async ({ page = 1, limit = 20 }, callback) => {
+    socket.on('informes', async ({ text = '', page = 1, limit = 20 }, callback) => {
         try {
+            const regex = new RegExp(text.replaceAll(' ', '_'), 'i'); // Ignorar mayúsculas/minúsculas y reemplazar espacios
             const skip = (page - 1) * limit;
 
-            // Total informados
-            const totalInformados = await Usuario.countDocuments({ "estudios.informado": true });
-            const usuariosInformados = await Usuario.find({ "estudios.informado": true })
+            // 🔹 Filtrar estudios informados con el término de búsqueda
+            const queryInformados = {
+                dni: { $ne: 'admin' }, // Excluir administrador
+                "estudios.informado": true,
+                $or: [
+                    { dni: { $regex: regex } }, // Buscar coincidencia en el DNI
+                    { nombre: { $regex: regex } } // Buscar coincidencia en el Nombre
+                ],
+            };
+
+            // Obtener estudios informados con filtro
+            const totalInformados = await Usuario.countDocuments(queryInformados);
+            const usuariosInformados = await Usuario.find(queryInformados)
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit);
@@ -351,7 +362,7 @@ io.on('connection', (socket) => {
                 estudios: usuario.estudios.filter(estudio => estudio.informado === true),
             }));
 
-            // Total no informados
+            // 🔹 Obtener estudios NO informados SIN aplicar el filtro de búsqueda
             const totalNoInformados = await Usuario.countDocuments({ "estudios.informado": false });
             const usuariosNoInformados = await Usuario.find({ "estudios.informado": false })
                 .sort({ createdAt: -1 })
@@ -366,7 +377,7 @@ io.on('connection', (socket) => {
             callback({
                 estudiosInformados,
                 totalInformados,
-                estudiosNoInformados,
+                estudiosNoInformados,  // 🔹 Los estudios NO informados ya NO tienen filtro
                 totalNoInformados,
                 success: true,
             });

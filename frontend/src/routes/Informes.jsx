@@ -10,6 +10,7 @@ const Informes = () => {
     const [currentPage, setCurrentPage] = useState(1); // Página actual
     const [totalPages, setTotalPages] = useState(1); // Total de páginas
     const studiesPerPage = 20; // Configuración de estudios por página
+    const [searchTerm, setSearchTerm] = useState('');
 
     const navigate = useNavigate();
     const location = useLocation();
@@ -53,10 +54,10 @@ const Informes = () => {
             });
     };
 
-    const fetchData = (page = 1) => {
+    const buscarInformes = (text = '', page = 1) => {
         socket.emit(
             'informes',
-            { page, limit: studiesPerPage }, // Parámetros de paginación
+            { text, page, limit: studiesPerPage },
             (response) => {
                 if (response.success) {
                     setEstudiosInformados(response.estudiosInformados);
@@ -68,6 +69,12 @@ const Informes = () => {
             }
         );
     };
+
+    useEffect(() => {
+        if (currentPage > totalPages) {
+            setCurrentPage(1);
+        }
+    }, [totalPages]);
 
     const handlePageChange = (page) => {
         setCurrentPage(page);
@@ -127,16 +134,16 @@ const Informes = () => {
 
     useEffect(() => {
         socket.on('cambios', () => {
-            fetchData(currentPage);
+            buscarInformes(searchTerm, currentPage);
             setUploadingStudyId(null);
         });
 
-        fetchData(currentPage);
+        buscarInformes(searchTerm, currentPage);
 
         return () => {
             socket.off('cambios');
         };
-    }, [currentPage]);
+    }, [searchTerm, currentPage]);
 
     return (
         <div className="content-wrapper">
@@ -176,7 +183,9 @@ const Informes = () => {
 
                 <div className="tables-wrapper">
                     <div className="table-section">
-                        <h2 className="table-title">Estudios No Informados</h2>
+                        <div className="table-section-header-no-informados">
+                            <h2 className="table-title">Estudios NO Informados</h2>
+                        </div>
                         <div className="responsive-table">
                             <div className="scroll">
                                 <table className="patients-table">
@@ -224,7 +233,17 @@ const Informes = () => {
                         </div>
                     </div>
                     <div className="table-section">
-                        <h2 className="table-title">Estudios Informados</h2>
+                        <div className="table-section-header">
+                            <h2 className="table-title">Estudios Informados</h2>
+                            <input
+                                type="text"
+                                placeholder="Buscar por DNI o Nombre"
+                                className="search-input informes-search-input"
+                                value={searchTerm} // <- Conectar con el estado
+                                onChange={(e) => setSearchTerm(e.target.value)} // <- Actualizar búsqueda en tiempo real
+                            />
+
+                        </div>
                         <div className="responsive-table">
                             <div className="scroll">
                                 <table className="patients-table">
