@@ -175,7 +175,7 @@ async function analizarCarpeta(usuarioPath) {
     } catch (error) {
         console.error('Error al crear o actualizar usuario:', error);
     }
-    console.error(`Carpeta analizada correctamente ${usuarioPath}`);
+    //console.error(`Carpeta analizada correctamente ${usuarioPath}`);
 };
 
 // Función para analizar todas las carpetas de estudios inicialmente
