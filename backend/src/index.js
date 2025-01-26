@@ -387,6 +387,51 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('eliminar-estudio', async (id) => {
+        try {
+            // Buscar el usuario y el estudio correspondiente
+            const usuario = await Usuario.findOne({ "estudios.id": id });
+
+            if (!usuario) {
+                console.error(`Usuario no encontrado para el estudio con ID: ${id}`);
+                return;
+            }
+
+            const estudio = usuario.estudios.find(est => est.id === id);
+            if (!estudio) {
+                console.error(`Estudio no encontrado con ID: ${id}`);
+                return;
+            }
+
+            // Construir la ruta completa de la carpeta a eliminar
+            const estudioPath = path.join(
+                rutaCarpeta,
+                `${usuario.nombre}${usuario.dni}`,
+                estudio.nombre
+            );
+
+            // Eliminar la carpeta del sistema de archivos
+            if (fs.existsSync(estudioPath)) {
+                fs.rmSync(estudioPath, { recursive: true, force: true });
+                console.log(`Carpeta eliminada: ${estudioPath}`);
+            } else {
+                console.log(`La carpeta no existe: ${estudioPath}`);
+            }
+
+            // Eliminar el estudio de la base de datos
+            await Usuario.findOneAndUpdate(
+                { dni: usuario.dni },
+                { $pull: { estudios: { id } } } // Eliminar el estudio del array
+            );
+
+            // Notificar a los clientes para que actualicen la lista
+            io.emit('cambios');
+        } catch (error) {
+            console.error(`Error al eliminar el estudio con ID ${id}:`, error);
+        }
+    });
+
+
     socket.on('cambiar-informe', async (id) => {
         const updatedUser = await Usuario.findOneAndUpdate(
             { "estudios.id": id },

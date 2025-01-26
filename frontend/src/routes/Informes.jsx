@@ -224,7 +224,23 @@ const Informes = () => {
                                                             'Subir'
                                                         )}
                                                     </label>
+
+                                                    <button
+                                                        className="action-button delete-action"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation(); // Evita que se abra la vista del estudio
+                                                            if (window.confirm(`¿Está seguro que desea borrar el estudio ${study.nombreEstudio}? Esta acción es irreversible.`)) {
+                                                                socket.emit('eliminar-estudio', study.id);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <i className="fas fa-trash-alt"></i>
+                                                    </button>
+
+
                                                 </td>
+
+
                                             </tr>
                                         ))}
                                     </tbody>

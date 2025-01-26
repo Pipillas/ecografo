@@ -339,6 +339,29 @@
     min-height: 80px;
 }
 
+/* Botón eliminar */
+.delete-action {
+    background-color: #f43f5e;
+    /* Color rojo */
+    border: 1px solid #f43f5e;
+    text-align: center;
+    cursor: pointer;
+    border-radius: 6px;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    color: #fff;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    margin-left: 10px;
+    /* Espaciado entre botones */
+}
+
+/* Hover eliminar */
+.delete-action:hover {
+    background-color: #e11d48;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+
 /* Media queries */
 @media (max-width: 1410px) {
     .tables-wrapper {
