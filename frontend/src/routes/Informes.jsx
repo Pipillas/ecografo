@@ -79,11 +79,17 @@ const Informes = () => {
 
     const handlePageChange = (page) => {
         setCurrentPage(page);
-        // Ajustar la ventana de paginación para mantener la página actual en el centro si es posible
-        if (page > pageOffset + 2) {
-            setPageOffset(page - 2);
-        } else if (page < pageOffset + 1) {
-            setPageOffset(page - 1);
+
+        // Ajustar la ventana de paginación dinámicamente
+        const middle = 2; // Índice medio de la paginación (0-based)
+        const maxVisiblePages = 3; // Número máximo de páginas visibles
+
+        if (page > middle && page <= totalPages - middle) {
+            setPageOffset(page - middle);
+        } else if (page <= middle) {
+            setPageOffset(0);
+        } else if (page > totalPages - middle) {
+            setPageOffset(Math.max(totalPages - maxVisiblePages, 0));
         }
     };
 
