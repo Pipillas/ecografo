@@ -20,20 +20,22 @@ function Estudios({ usuario }) {
     }
 
     function compartirEnlace(estudioId) {
-        // Construir la URL base correctamente
         const url = `https://ecoalem489.com/estudio/${estudioId}`;
-
-        // Texto para compartir
-        const text = `Visita este enlace: ${url}`;
-
-        // Crear URL específica para WhatsApp normal (no business)
-        // Usamos whatsapp:// en lugar de https://wa.me para forzar la app normal
-        const waUrl = `whatsapp://send?text=${encodeURIComponent(text)}`;
-
-        // Abrir WhatsApp en una nueva pestaña
-        window.open(waUrl, '_blank');
+        const text = `Visita este enlace`;
+        if (navigator.share) {
+            navigator.share({
+                title: 'Compartir Estudio',
+                text: text,
+                url: url,
+            })
+                .then(() => console.log('Compartido exitosamente'))
+                .catch((error) => console.error('Error al compartir:', error));
+        } else {
+            // Fallback para navegadores que no soportan la API Web Share
+            const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+            window.open(waUrl, '_blank');
+        }
     }
-
 
     useEffect(() => {
         socket.emit('estudios', usuario.id, (response) => {

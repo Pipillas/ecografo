@@ -11,6 +11,7 @@ const Informes = () => {
     const [totalPages, setTotalPages] = useState(1); // Total de páginas
     const studiesPerPage = 20; // Configuración de estudios por página
     const [searchTerm, setSearchTerm] = useState('');
+    const [pageOffset, setPageOffset] = useState(0); // Controla qué páginas mostrar en la paginación
 
     const navigate = useNavigate();
     const location = useLocation();
@@ -78,6 +79,12 @@ const Informes = () => {
 
     const handlePageChange = (page) => {
         setCurrentPage(page);
+        // Ajustar la ventana de paginación para mantener la página actual en el centro si es posible
+        if (page > pageOffset + 2) {
+            setPageOffset(page - 2);
+        } else if (page < pageOffset + 1) {
+            setPageOffset(page - 1);
+        }
     };
 
     function formatStudyString(studyString) {
@@ -130,6 +137,22 @@ const Informes = () => {
         });
 
         return allStudies;
+    }
+
+    function compartirEnlace(estudioId) {
+        const url = `https://ecoalem489.com/estudio/${estudioId}`;
+        if (navigator.share) {
+            navigator.share({
+                title: 'Compartir Estudio',
+                url: url,
+            })
+                .then(() => console.log('Compartido exitosamente'))
+                .catch((error) => console.error('Error al compartir:', error));
+        } else {
+            // Fallback para navegadores que no soportan la API Web Share
+            const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+            window.open(waUrl, '_blank');
+        }
     }
 
     useEffect(() => {
@@ -282,21 +305,24 @@ const Informes = () => {
                                                     <td className="nombre">{patient.nombre.replaceAll('_', ' ').toUpperCase()}</td>
                                                     <td>{formatStudyString(est.nombre)}</td>
                                                     <td onClick={(e) => e.stopPropagation()}>
-                                                        <button
-                                                            onClick={() => {
-                                                                if (
-                                                                    window.confirm(
-                                                                        `¿Está seguro que desea borrar el informe de ${patient.nombre}?
+                                                        <div className="actions-cell">
+                                                            <button
+                                                                onClick={() => {
+                                                                    if (
+                                                                        window.confirm(
+                                                                            `¿Está seguro que desea borrar el informe de ${patient.nombre}?
 ¡Esta acción es irreversible!`
-                                                                    )
-                                                                ) {
-                                                                    socket.emit('cambiar-informe', est.id);
-                                                                }
-                                                            }}
-                                                            className="action-button cancel-action"
-                                                        >
-                                                            Cancelar
-                                                        </button>
+                                                                        )
+                                                                    ) {
+                                                                        socket.emit('cambiar-informe', est.id);
+                                                                    }
+                                                                }}
+                                                                className="action-button cancel-action"
+                                                            >
+                                                                Cancelar
+                                                            </button>
+                                                            <button className="action-button compartir-action" onClick={() => compartirEnlace(est.id)}>Compartir</button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))
@@ -305,15 +331,34 @@ const Informes = () => {
                                 </table>
                             </div>
                             <div className="pagination">
-                                {Array.from({ length: totalPages }, (_, i) => (
-                                    <button
-                                        key={i + 1}
-                                        className={`pagination-button ${currentPage === i + 1 ? 'active' : ''}`}
-                                        onClick={() => handlePageChange(i + 1)}
-                                    >
-                                        {i + 1}
-                                    </button>
-                                ))}
+                                <button
+                                    className="pagination-button"
+                                    disabled={currentPage === 1}
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                >
+                                    &lt;
+                                </button>
+
+                                {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
+                                    const pageNumber = pageOffset + i + 1;
+                                    return pageNumber <= totalPages ? (
+                                        <button
+                                            key={pageNumber}
+                                            className={`pagination-button ${currentPage === pageNumber ? 'active' : ''}`}
+                                            onClick={() => handlePageChange(pageNumber)}
+                                        >
+                                            {pageNumber}
+                                        </button>
+                                    ) : null;
+                                })}
+
+                                <button
+                                    className="pagination-button"
+                                    disabled={currentPage === totalPages}
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                >
+                                    &gt;
+                                </button>
                             </div>
                         </div>
                     </div>

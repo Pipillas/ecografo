@@ -219,6 +219,19 @@
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
+/* Botón compartir */
+.compartir-action {
+    background-color: #3b82f6;
+    /* azul */
+}
+
+/* Hover compartir */
+.compartir-action:hover {
+    background-color: #2563eb;
+    /* azul más oscuro */
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
 .custom-file-upload {
     display: inline-flex;
     /* o flex, según necesites */
