@@ -21,11 +21,9 @@ function Estudios({ usuario }) {
 
     function compartirEnlace(estudioId) {
         const url = `https://ecoalem489.com/estudio/${estudioId}`;
-        const text = `Visita este enlace`;
         if (navigator.share) {
             navigator.share({
                 title: 'Compartir Estudio',
-                text: text,
                 url: url,
             })
                 .then(() => console.log('Compartido exitosamente'))

@@ -9,6 +9,7 @@ const Patients = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const patientsPerPage = 10;
+    const [pageOffset, setPageOffset] = useState(0); // Controla qué páginas mostrar en la paginación
 
     const navigate = useNavigate();
     const location = useLocation();
@@ -41,6 +42,18 @@ const Patients = () => {
 
     const handlePageChange = (page) => {
         setCurrentPage(page);
+
+        // Ajustar la ventana de paginación dinámicamente
+        const middle = 2; // Índice medio de la paginación (0-based)
+        const maxVisiblePages = 3; // Número máximo de páginas visibles
+
+        if (page > middle && page <= totalPages - middle) {
+            setPageOffset(page - middle);
+        } else if (page <= middle) {
+            setPageOffset(0);
+        } else if (page > totalPages - middle) {
+            setPageOffset(Math.max(totalPages - maxVisiblePages, 0));
+        }
     };
 
     return (
@@ -138,15 +151,34 @@ const Patients = () => {
                         </div>
                         {totalPages > 1 && (
                             <div className="pagination">
-                                {Array.from({ length: totalPages }, (_, i) => (
-                                    <button
-                                        key={i + 1}
-                                        className={`pagination-button ${currentPage === i + 1 ? 'active' : ''}`}
-                                        onClick={() => handlePageChange(i + 1)}
-                                    >
-                                        {i + 1}
-                                    </button>
-                                ))}
+                                <button
+                                    className="pagination-button"
+                                    disabled={currentPage === 1}
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                >
+                                    &lt;
+                                </button>
+
+                                {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
+                                    const pageNumber = pageOffset + i + 1;
+                                    return pageNumber <= totalPages ? (
+                                        <button
+                                            key={pageNumber}
+                                            className={`pagination-button ${currentPage === pageNumber ? 'active' : ''}`}
+                                            onClick={() => handlePageChange(pageNumber)}
+                                        >
+                                            {pageNumber}
+                                        </button>
+                                    ) : null;
+                                })}
+
+                                <button
+                                    className="pagination-button"
+                                    disabled={currentPage === totalPages}
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                >
+                                    &gt;
+                                </button>
                             </div>
                         )}
                     </div>

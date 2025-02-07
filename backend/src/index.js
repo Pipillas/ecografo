@@ -493,13 +493,15 @@ app.get('*', (req, res) => {
 });
 
 async function crearAdmin() {
-    const hashedPassword = bcrypt.hashSync('admin', 10);
+    const hashedPassword = bcrypt.hashSync('Admin489.', 10);
     await Usuario.create({
         dni: 'admin',
         clave: hashedPassword,
         nombre: 'admin',
     });
 };
+
+//crearAdmin();
 
 server.listen(PORT, async () => {
     console.log(`Server listening on port ${PORT}`);
