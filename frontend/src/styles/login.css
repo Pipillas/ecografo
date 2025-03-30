@@ -161,6 +161,45 @@
     font-weight: 500;
 }
 
+.login-footer {
+    margin-top: 20px;
+    text-align: center;
+    opacity: 0.85;
+}
+
+.contact-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.contact-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #64748b;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.contact-item i {
+    color: #f97316;
+    font-size: 14px;
+}
+
+.contact-item:hover {
+    color: #f97316;
+}
+
+.no-style-link {
+    text-decoration: none; /* Quita el subrayado del enlace */
+    color: inherit; /* Usa el color del padre (gris) */
+    font-weight: inherit; /* Usa el peso del texto del padre */
+}
+
+
 @media (max-width: 480px) {
     .login-card {
         padding: 32px 24px;
@@ -168,5 +207,13 @@
 
     .logo img {
         width: 180px;
+    }
+
+    .contact-item {
+        font-size: 12px;
+    }
+
+    .contact-item i {
+        font-size: 13px;
     }
 }

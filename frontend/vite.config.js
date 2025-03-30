@@ -8,7 +8,7 @@ export default defineConfig({
     host: true, // Permite acceso desde la red local
   },
   build: {
-    outDir: 'C:/Users/pipas/Escritorio/ecografo/backend/dist',
+    outDir: 'C:/Users/Server/Desktop/ecografo/backend/dist',
     emptyOutDir: true, // Vacía la carpeta de salida aunque esté fuera del proyecto
   },
 })
