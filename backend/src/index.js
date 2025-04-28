@@ -22,6 +22,7 @@ app.use(express.json());
 
 // Define la ruta de la carpeta que deseas observar
 const rutaCarpeta = 'C:/Users/Server/OneDrive/estudios';
+//const rutaCarpeta = '/mnt/onedrive'; // ESTO ES PARA HOSTINGER VPS JULI
 //const rutaCarpeta = 'C:/Users/Pipas/Desktop/prueba';
 //const IP = 'http://192.168.0.26:3000';
 const IP = 'https://ecoalem489.com';
