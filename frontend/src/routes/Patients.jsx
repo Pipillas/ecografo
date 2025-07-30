@@ -138,6 +138,25 @@ const Patients = () => {
                                                 >
                                                     Reset
                                                 </button>
+                                                <button
+                                                    onClick={() => {
+                                                        const nuevoDni = prompt(`Ingrese el nuevo DNI para ${patient.nombre}:`);
+                                                        if (!nuevoDni) return;
+                                                        if (window.confirm(`¿Está seguro que desea cambiar el DNI de ${patient.nombre} a ${nuevoDni}?`)) {
+                                                            socket.emit('cambiar-dni', { id: patient._id, nuevoDNI: nuevoDni }, (response) => {
+                                                                if (!response.success) {
+                                                                    alert('Error al cambiar el DNI: ' + response.error);
+                                                                } else {
+                                                                    alert('DNI actualizado correctamente.');
+                                                                    buscarPacientes(searchTerm, currentPage);
+                                                                }
+                                                            });
+                                                        }
+                                                    }}
+                                                    className="action-button"
+                                                >
+                                                    Cambiar DNI
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}

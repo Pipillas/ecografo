@@ -1,4 +1,4 @@
-const chokidar = require('chokidar');
+//const chokidar = require('chokidar');
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
@@ -21,12 +21,42 @@ app.use(cors({ origin: '*' }));
 app.use(express.json());
 
 // Define la ruta de la carpeta que deseas observar
-//const rutaCarpeta = 'C:/Users/Server/OneDrive/estudios';
-const rutaCarpeta = '/mnt/onedrive'; // ESTO ES PARA HOSTINGER VPS JULI
+// const rutaCarpeta = 'C:/Users/Server/OneDrive/estudios';
+const rutaCarpeta = 'C:/Users/Administrator/OneDrive/estudios'
+//const rutaCarpeta = '/mnt/onedrive'; // ESTO ES PARA HOSTINGER VPS JULI
 //const rutaCarpeta = 'C:/Users/Pipas/Desktop/prueba';
 //const IP = 'http://192.168.0.26:3000';
 const IP = 'https://ecoalem489.com';
 
+function analizarCarpetasModificadasEn(minutos = 5) {
+    const ahora = Date.now();
+    const usuarios = fs.readdirSync(rutaCarpeta);
+
+    for (const usuario of usuarios) {
+        const usuarioPath = path.join(rutaCarpeta, usuario);
+
+        try {
+            const stats = fs.statSync(usuarioPath);
+            const ultimaModificacion = stats.mtimeMs;
+
+            // Si se modificó en los últimos X minutos
+            if (ahora - ultimaModificacion < minutos * 60 * 1000) {
+                console.log(`Analizando carpeta modificada: ${usuarioPath}`);
+                analizarCarpeta(usuarioPath); // No hace falta que sea async acá
+            }
+        } catch (error) {
+            console.error(`Error con la carpeta ${usuarioPath}:`, error);
+        }
+    }
+
+    io.emit('cambios');
+}
+
+setInterval(() => {
+    analizarCarpetasModificadasEn(1); // analiza solo las modificadas en los últimos 2 minutos
+}, 60 * 1000); // cada 2 minutos
+
+/*
 const watcher = chokidar.watch(rutaCarpeta, {
     persistent: true,
     ignoreInitial: true,
@@ -35,8 +65,9 @@ const watcher = chokidar.watch(rutaCarpeta, {
         stabilityThreshold: 2000, // Tiempo de espera más largo si los archivos se escriben muy rápido
         pollInterval: 500,
     },
-    interval: 500, // Intervalo entre las verificaciones
+    interval: 30000, // Intervalo entre las verificaciones
 });
+*/
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -179,12 +210,13 @@ async function analizarCarpeta(usuarioPath) {
 };
 
 // Función para analizar todas las carpetas de estudios inicialmente
-async function analizarTodasLasCarpetas() {
+function analizarTodasLasCarpetas() {
     const usuarios = fs.readdirSync(rutaCarpeta);
     // Procesar cada carpeta de usuario en el directorio 'estudios'
     for (const usuario of usuarios) {
+        console.log(usuario);
         const usuarioPath = path.join(rutaCarpeta, usuario);
-        await analizarCarpeta(usuarioPath);
+        analizarCarpeta(usuarioPath);
     }
 }
 
@@ -201,6 +233,7 @@ const getFirstLevelFolderPath = (pathToFolder) => {
     return null;
 };
 
+/*
 watcher.on('all', async (event, pathParameter) => {
     const firstLevelFolderPath = getFirstLevelFolderPath(pathParameter);
     if (!firstLevelFolderPath) return; // Ignorar si no hay una carpeta válida
@@ -213,6 +246,7 @@ watcher.on('all', async (event, pathParameter) => {
         console.error(`Error al manejar evento ${event} para ${pathParameter}:`, error);
     }
 });
+*/
 
 // Configuración del servidor y socket.io
 const JWT_SECRET = 'pipillitas'; // Debes cambiar esto por una variable de entorno
@@ -431,7 +465,6 @@ io.on('connection', (socket) => {
         }
     });
 
-
     socket.on('cambiar-informe', async (id) => {
         const updatedUser = await Usuario.findOneAndUpdate(
             { "estudios.id": id },
@@ -462,20 +495,58 @@ io.on('connection', (socket) => {
         }
         io.emit('cambios');
     });
+
+    socket.on('cambiar-dni', async ({ id, nuevoDNI }, callback) => {
+        try {
+            const usuario = await Usuario.findById(id);
+            if (!usuario) return callback({ success: false, error: 'Usuario no encontrado' });
+
+            const carpetaVieja = path.join(rutaCarpeta, `${usuario.nombre}${usuario.dni}`);
+            const carpetaNueva = path.join(rutaCarpeta, `${usuario.nombre}${nuevoDNI}`);
+
+            // Renombrar carpeta en disco
+            if (fs.existsSync(carpetaVieja)) {
+                fs.renameSync(carpetaVieja, carpetaNueva);
+            }
+
+            // Hashear el nuevo DNI como contraseña
+            const nuevaClave = bcrypt.hashSync(nuevoDNI, 10);
+
+            // Actualizar en MongoDB
+            await Usuario.findByIdAndUpdate(id, {
+                dni: nuevoDNI,
+                clave: nuevaClave,
+            });
+
+            io.emit('cambios');
+            callback({ success: true });
+        } catch (error) {
+            console.error('Error al cambiar DNI:', error);
+            callback({ success: false, error: 'Error al cambiar DNI' });
+        }
+    });
+
 });
 
 // Inicio del servidor
 const PORT = process.env.PORT || 3000;
 
-// Endpoint para recibir el archivo
 app.post('/upload/:usuario/:estudioNombre', upload.single('file'), async (req, res) => {
     try {
+        const usuarioFolder = req.params.usuario; // ej: "Perez12345678"
+        const fullPath = path.join(rutaCarpeta, usuarioFolder);
+
         await Usuario.findOneAndUpdate(
             { "estudios.id": req.body.id },
-            { $set: { "estudios.$.informado": true, "estudios.$.path": req.file.path } }, // Actualiza solo el elemento del array que coincide
+            { $set: { "estudios.$.informado": true, "estudios.$.path": req.file.path } }
         );
+
+        await analizarCarpeta(fullPath); // 👈 Llamada directa a la función para este usuario
+
+        io.emit('cambios');
         res.status(200).send({ message: 'Archivo subido correctamente', file: req.file });
     } catch (error) {
+        console.error('Error en /upload:', error);
         res.status(500).send({ error: 'Error al subir el archivo' });
     }
 });
@@ -510,7 +581,7 @@ server.listen(PORT, async () => {
         await dbConnection;
         console.log("Base de datos conectada. Analizando carpetas...");
         // Una vez conectado, analiza las carpetas
-        await analizarTodasLasCarpetas();
+        analizarTodasLasCarpetas();
         //await crearAdmin();
         console.log("Carpetas analizadas.");
     } catch (error) {
