@@ -501,12 +501,10 @@ io.on('connection', (socket) => {
             const usuario = await Usuario.findById(id);
             if (!usuario) return callback({ success: false, error: 'Usuario no encontrado' });
 
-            const carpetaVieja = path.join(rutaCarpeta, `${usuario.nombre}${usuario.dni}`);
-            const carpetaNueva = path.join(rutaCarpeta, `${usuario.nombre}${nuevoDNI}`);
-
-            // Renombrar carpeta en disco
-            if (fs.existsSync(carpetaVieja)) {
-                fs.renameSync(carpetaVieja, carpetaNueva);
+            // ⚠️ Verificar si ya existe un usuario con ese nuevo DNI
+            const dniExistente = await Usuario.findOne({ dni: nuevoDNI });
+            if (dniExistente && dniExistente._id.toString() !== id) {
+                return callback({ success: false, error: 'Ya existe un usuario con ese DNI' });
             }
 
             // Hashear el nuevo DNI como contraseña
@@ -517,6 +515,14 @@ io.on('connection', (socket) => {
                 dni: nuevoDNI,
                 clave: nuevaClave,
             });
+
+            const carpetaVieja = path.join(rutaCarpeta, `${usuario.nombre}${usuario.dni}`);
+            const carpetaNueva = path.join(rutaCarpeta, `${usuario.nombre}${nuevoDNI}`);
+
+            // Renombrar carpeta en disco
+            if (fs.existsSync(carpetaVieja)) {
+                fs.renameSync(carpetaVieja, carpetaNueva);
+            }
 
             io.emit('cambios');
             callback({ success: true });

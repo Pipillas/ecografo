@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import '../styles/patients.css';
 import { socket } from '../main';
@@ -34,6 +34,7 @@ const Patients = () => {
         if (currentPage > totalPages) {
             setCurrentPage(1);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [totalPages]);
 
     useEffect(() => {
@@ -117,46 +118,48 @@ const Patients = () => {
                                             <td>{patient.dni}</td>
                                             <td>{patient.nombre.replaceAll('_', ' ').toUpperCase()}</td>
                                             <td>
-                                                <button
-                                                    onClick={() => {
-                                                        if (window.confirm(`¿Está seguro que desea cambiar la contraseña de ${patient.nombre}?`)) {
-                                                            socket.emit(
-                                                                'cambiar-password',
-                                                                {
-                                                                    id: patient._id,
-                                                                    passwordNueva: patient.dni,
-                                                                },
-                                                                (response) => {
-                                                                    if (response.error) {
-                                                                        console.error(response.error);
+                                                <div className='actions-cell'>
+                                                    <button
+                                                        onClick={() => {
+                                                            if (window.confirm(`¿Está seguro que desea cambiar la contraseña de ${patient.nombre}?`)) {
+                                                                socket.emit(
+                                                                    'cambiar-password',
+                                                                    {
+                                                                        id: patient._id,
+                                                                        passwordNueva: patient.dni,
+                                                                    },
+                                                                    (response) => {
+                                                                        if (response.error) {
+                                                                            console.error(response.error);
+                                                                        }
                                                                     }
-                                                                }
-                                                            );
-                                                        }
-                                                    }}
-                                                    className="action-button cancel-action"
-                                                >
-                                                    Reset
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        const nuevoDni = prompt(`Ingrese el nuevo DNI para ${patient.nombre}:`);
-                                                        if (!nuevoDni) return;
-                                                        if (window.confirm(`¿Está seguro que desea cambiar el DNI de ${patient.nombre} a ${nuevoDni}?`)) {
-                                                            socket.emit('cambiar-dni', { id: patient._id, nuevoDNI: nuevoDni }, (response) => {
-                                                                if (!response.success) {
-                                                                    alert('Error al cambiar el DNI: ' + response.error);
-                                                                } else {
-                                                                    alert('DNI actualizado correctamente.');
-                                                                    buscarPacientes(searchTerm, currentPage);
-                                                                }
-                                                            });
-                                                        }
-                                                    }}
-                                                    className="action-button"
-                                                >
-                                                    Cambiar DNI
-                                                </button>
+                                                                );
+                                                            }
+                                                        }}
+                                                        className="action-button cancel-action"
+                                                    >
+                                                        Reset
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            const nuevoDni = prompt(`Ingrese el nuevo DNI para ${patient.nombre}:`);
+                                                            if (!nuevoDni) return;
+                                                            if (window.confirm(`¿Está seguro que desea cambiar el DNI de ${patient.nombre} a ${nuevoDni}?`)) {
+                                                                socket.emit('cambiar-dni', { id: patient._id, nuevoDNI: nuevoDni }, (response) => {
+                                                                    if (!response.success) {
+                                                                        alert('Error al cambiar el DNI: ' + response.error);
+                                                                    } else {
+                                                                        alert('DNI actualizado correctamente.');
+                                                                        buscarPacientes(searchTerm, currentPage);
+                                                                    }
+                                                                });
+                                                            }
+                                                        }}
+                                                        className="action-button custom-file-upload"
+                                                    >
+                                                        Cambiar DNI
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
