@@ -38,7 +38,6 @@ function analizarCarpetasModificadasEn(minutos = 5) {
         try {
             const stats = fs.statSync(usuarioPath);
             const ultimaModificacion = stats.mtimeMs;
-
             // Si se modificó en los últimos X minutos
             if (ahora - ultimaModificacion < minutos * 60 * 1000) {
                 console.log(`Analizando carpeta modificada: ${usuarioPath}`);
@@ -53,8 +52,8 @@ function analizarCarpetasModificadasEn(minutos = 5) {
 }
 
 setInterval(() => {
-    analizarCarpetasModificadasEn(1); // analiza solo las modificadas en los últimos 2 minutos
-}, 60 * 1000); // cada 2 minutos
+    analizarCarpetasModificadasEn(10); // analiza solo las modificadas en el último minutos
+}, 60 * 1000);
 
 /*
 const watcher = chokidar.watch(rutaCarpeta, {
@@ -153,7 +152,7 @@ async function analizarCarpeta(usuarioPath) {
         if (!data.numeros) {
             console.log(`Usuario inválido encontrado: ${usuarios[i]}. Continuando.`);
             continue; // Salir de esta iteración, pero no detener el bucle
-        }
+        };
         if (numeros === data.numeros && usuarios[i] !== usuarioNombre) {
             copiarArchivos(path.join(rutaCarpeta, usuarios[i]), usuarioPath);
         };
@@ -250,6 +249,47 @@ watcher.on('all', async (event, pathParameter) => {
 
 // Configuración del servidor y socket.io
 const JWT_SECRET = 'pipillitas'; // Debes cambiar esto por una variable de entorno
+
+function ensureDirSync(dir) {
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+}
+
+function moveMergeDir(src, dest) {
+    if (!fs.existsSync(src)) return;
+    ensureDirSync(dest);
+
+    const entries = fs.readdirSync(src, { withFileTypes: true });
+    for (const entry of entries) {
+        const srcPath = path.join(src, entry.name);
+        const destPath = path.join(dest, entry.name);
+
+        if (entry.isDirectory()) {
+            moveMergeDir(srcPath, destPath);
+        } else {
+            // Si el archivo ya existe en destino, conserva ambos renombrando el que viene de src
+            if (fs.existsSync(destPath)) {
+                const parsed = path.parse(destPath);
+                // sufijo con timestamp para evitar colisión
+                const altDestPath = path.join(parsed.dir, `${parsed.name}__from_merge_${Date.now()}${parsed.ext}`);
+                fs.renameSync(srcPath, altDestPath);
+            } else {
+                // mover (rename) si mismo volumen; si falla, copiar y borrar
+                try {
+                    fs.renameSync(srcPath, destPath);
+                } catch {
+                    fs.copyFileSync(srcPath, destPath);
+                    fs.unlinkSync(srcPath);
+                }
+            }
+        }
+    }
+    // intentar borrar la carpeta fuente si quedó vacía
+    try { fs.rmdirSync(src); } catch { }
+}
+
+function uniqueArray(arr) {
+    return Array.from(new Set(arr));
+}
 
 io.on('connection', (socket) => {
     socket.on('entrar', async (usuario, callback) => {
@@ -374,27 +414,56 @@ io.on('connection', (socket) => {
             const regex = new RegExp(text.replaceAll(' ', '_'), 'i'); // Ignorar mayúsculas/minúsculas y reemplazar espacios
             const skip = (page - 1) * limit;
 
-            // 🔹 Filtrar estudios informados con el término de búsqueda
-            const queryInformados = {
+            const baseMatchInformados = {
                 dni: { $ne: 'admin' }, // Excluir administrador
-                "estudios.informado": true,
                 $or: [
                     { dni: { $regex: regex } }, // Buscar coincidencia en el DNI
                     { nombre: { $regex: regex } } // Buscar coincidencia en el Nombre
                 ],
             };
 
-            // Obtener estudios informados con filtro
-            const totalInformados = await Usuario.countDocuments(queryInformados);
-            const usuariosInformados = await Usuario.find(queryInformados)
-                .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(limit);
+            const estudiosInformadosPipeline = [
+                { $match: baseMatchInformados },
+                { $unwind: '$estudios' },
+                { $match: { 'estudios.informado': true } },
+                {
+                    // Mantiene la misma lógica de fecha usada en frontend (asume prefijo de 3 letras + YYYYMMDDHHmm...)
+                    $addFields: { estudioFechaOrden: { $substrCP: ['$estudios.nombre', 3, 12] } }
+                },
+                { $sort: { estudioFechaOrden: -1, 'estudios.nombre': -1, _id: -1 } },
+                { $skip: skip },
+                { $limit: limit },
+                {
+                    $project: {
+                        _id: 1,
+                        dni: 1,
+                        nombre: 1,
+                        estudio: '$estudios',
+                    }
+                },
+            ];
 
-            const estudiosInformados = usuariosInformados.map(usuario => ({
-                ...usuario.toObject(),
-                estudios: usuario.estudios.filter(estudio => estudio.informado === true),
+            const totalInformadosPipeline = [
+                { $match: baseMatchInformados },
+                { $unwind: '$estudios' },
+                { $match: { 'estudios.informado': true } },
+                { $count: 'total' },
+            ];
+
+            const [filasInformadas, totalInformadosResult] = await Promise.all([
+                Usuario.aggregate(estudiosInformadosPipeline),
+                Usuario.aggregate(totalInformadosPipeline),
+            ]);
+
+            // Se conserva el shape esperado por el frontend: cada item con `dni`, `nombre` y array `estudios`.
+            const estudiosInformados = filasInformadas.map((fila) => ({
+                _id: fila._id,
+                dni: fila.dni,
+                nombre: fila.nombre,
+                estudios: [fila.estudio],
             }));
+
+            const totalInformados = totalInformadosResult[0]?.total || 0;
 
             // 🔹 Obtener estudios NO informados SIN aplicar el filtro de búsqueda
             const totalNoInformados = await Usuario.countDocuments({ "estudios.informado": false });
@@ -498,40 +567,119 @@ io.on('connection', (socket) => {
 
     socket.on('cambiar-dni', async ({ id, nuevoDNI }, callback) => {
         try {
-            const usuario = await Usuario.findById(id);
-            if (!usuario) return callback({ success: false, error: 'Usuario no encontrado' });
+            const usuarioOrigen = await Usuario.findById(id);
+            if (!usuarioOrigen) return callback({ success: false, error: 'Usuario no encontrado' });
 
-            // ⚠️ Verificar si ya existe un usuario con ese nuevo DNI
-            const dniExistente = await Usuario.findOne({ dni: nuevoDNI });
-            if (dniExistente && dniExistente._id.toString() !== id) {
-                return callback({ success: false, error: 'Ya existe un usuario con ese DNI' });
+            const dniDestinoDoc = await Usuario.findOne({ dni: nuevoDNI });
+
+            const carpetaOrigen = path.join(rutaCarpeta, `${usuarioOrigen.nombre}${usuarioOrigen.dni}`);
+            const nombreDestino = dniDestinoDoc ? dniDestinoDoc.nombre : usuarioOrigen.nombre;
+            const carpetaDestino = path.join(rutaCarpeta, `${nombreDestino}${nuevoDNI}`);
+
+            const baseVieja = `${usuarioOrigen.nombre}${usuarioOrigen.dni}`;
+            const baseNueva = `${nombreDestino}${nuevoDNI}`;
+
+            // Caso A: el DNI NO existe → rename + update + REESCRIBIR PATHS
+            if (!dniDestinoDoc) {
+                const nuevaClave = bcrypt.hashSync(nuevoDNI, 10);
+
+                // Renombrar carpeta (si existe)
+                if (fs.existsSync(carpetaOrigen)) {
+                    ensureDirSync(path.dirname(carpetaDestino));
+                    fs.renameSync(carpetaOrigen, carpetaDestino);
+                }
+
+                // Reescribir todos los paths de estudios del mismo usuario a la nueva base
+                const estudiosReescritos = (usuarioOrigen.estudios || []).map(e => {
+                    const nuevo = { ...e };
+                    if (typeof nuevo.path === 'string' && nuevo.path.includes(baseVieja)) {
+                        nuevo.path = nuevo.path.replace(baseVieja, baseNueva);
+                    }
+                    // NO tocar informado (se conserva tal cual)
+                    return nuevo;
+                });
+
+                await Usuario.findByIdAndUpdate(id, {
+                    dni: nuevoDNI,
+                    clave: nuevaClave,
+                    estudios: estudiosReescritos,
+                });
+
+                io.emit('cambios');
+                return callback({ success: true, merged: false });
             }
 
-            // Hashear el nuevo DNI como contraseña
-            const nuevaClave = bcrypt.hashSync(nuevoDNI, 10);
-
-            // Actualizar en MongoDB
-            await Usuario.findByIdAndUpdate(id, {
-                dni: nuevoDNI,
-                clave: nuevaClave,
-            });
-
-            const carpetaVieja = path.join(rutaCarpeta, `${usuario.nombre}${usuario.dni}`);
-            const carpetaNueva = path.join(rutaCarpeta, `${usuario.nombre}${nuevoDNI}`);
-
-            // Renombrar carpeta en disco
-            if (fs.existsSync(carpetaVieja)) {
-                fs.renameSync(carpetaVieja, carpetaNueva);
+            // Caso B: el DNI YA existe → FUSIONAR
+            // 1) Fusionar carpetas en disco
+            if (fs.existsSync(carpetaOrigen)) {
+                ensureDirSync(carpetaDestino);
+                moveMergeDir(carpetaOrigen, carpetaDestino);
             }
 
+            // 2) Fusionar estudios en Mongo
+            const usuarioDestino = dniDestinoDoc;
+            const estudiosDestino = Array.isArray(usuarioDestino.estudios) ? usuarioDestino.estudios : [];
+            const mapaDestinoPorNombre = new Map(estudiosDestino.map(e => [e.nombre, e]));
+
+            for (const estOrigen of (usuarioOrigen.estudios || [])) {
+                const destino = mapaDestinoPorNombre.get(estOrigen.nombre);
+                if (destino) {
+                    // Unir fotos únicas
+                    const fotosUnidas = uniqueArray([...(destino.fotos || []), ...(estOrigen.fotos || [])]);
+
+                    // Informado: true si cualquiera lo era (se conserva true)
+                    const informado = Boolean(destino.informado || estOrigen.informado);
+
+                    // Decidir path:
+                    // 1) Si alguno está informado y tiene path, priorizar ese path.
+                    // 2) Sino, priorizar path de destino; si no hay, usar el de origen.
+                    let pathElegido;
+                    if (informado) {
+                        const pathInformadoDestino = destino.informado ? destino.path : undefined;
+                        const pathInformadoOrigen = estOrigen.informado ? estOrigen.path : undefined;
+                        pathElegido = pathInformadoDestino || pathInformadoOrigen || destino.path || estOrigen.path;
+                    } else {
+                        pathElegido = destino.path || estOrigen.path;
+                    }
+
+                    // Reescribir base si aplica
+                    if (typeof pathElegido === 'string' && pathElegido.includes(baseVieja)) {
+                        pathElegido = pathElegido.replace(baseVieja, baseNueva);
+                    }
+
+                    // Merge final
+                    destino.fotos = fotosUnidas;
+                    destino.informado = informado;
+                    if (pathElegido) destino.path = pathElegido;
+
+                } else {
+                    // No existía ese estudio en destino → agregarlo (id único y path reescrito)
+                    const nuevoEstudio = { ...estOrigen };
+                    if (!nuevoEstudio.id) nuevoEstudio.id = uuidv4();
+
+                    if (typeof nuevoEstudio.path === 'string' && nuevoEstudio.path.includes(baseVieja)) {
+                        nuevoEstudio.path = nuevoEstudio.path.replace(baseVieja, baseNueva);
+                    }
+
+                    estudiosDestino.push(nuevoEstudio);
+                    mapaDestinoPorNombre.set(nuevoEstudio.nombre, nuevoEstudio);
+                }
+            }
+
+            usuarioDestino.estudios = estudiosDestino;
+
+            // 3) Guardar destino y eliminar origen
+            await usuarioDestino.save();
+            await Usuario.findByIdAndDelete(usuarioOrigen._id);
+
+            // 4) Emitir cambios
             io.emit('cambios');
-            callback({ success: true });
+            callback({ success: true, merged: true });
         } catch (error) {
-            console.error('Error al cambiar DNI:', error);
-            callback({ success: false, error: 'Error al cambiar DNI' });
+            console.error('Error al cambiar/fusionar DNI:', error);
+            callback({ success: false, error: 'Error al cambiar/fusionar DNI' });
         }
     });
-
 });
 
 // Inicio del servidor
@@ -587,9 +735,8 @@ server.listen(PORT, async () => {
         await dbConnection;
         console.log("Base de datos conectada. Analizando carpetas...");
         // Una vez conectado, analiza las carpetas
-        analizarTodasLasCarpetas();
-        //await crearAdmin();
-        console.log("Carpetas analizadas.");
+        //analizarTodasLasCarpetas();
+        analizarCarpetasModificadasEn(10);
     } catch (error) {
         console.error("Error al conectar con la base de datos o analizar carpetas:", error);
     }
